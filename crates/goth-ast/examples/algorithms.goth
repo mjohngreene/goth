@@ -1,0 +1,97 @@
+# Goth Examples: Classic Algorithms
+
+# Identity function
+╭─ id : T → T
+╰─ ₀
+
+# Constant function (returns first arg)
+╭─ const : A → B → A
+╰─ ₁
+
+# Function composition
+╭─ compose : (B → C) → (A → B) → A → C
+╰─ ₂ (₁ ₀)
+
+# Flip arguments
+╭─ flip : (A → B → C) → B → A → C
+╰─ ₂ ₀ ₁
+
+# Factorial (recursive)
+╭─ factorial : ℕ → ℕ
+╰─ match ₀
+     0 → 1
+     n → n × factorial (n - 1)
+
+# Fibonacci (recursive)
+╭─ fib : ℕ → ℕ
+╰─ match ₀
+     0 → 0
+     1 → 1
+     n → fib (n - 1) + fib (n - 2)
+
+# List length
+╭─ length : [n]T → ℕ
+│  ⊨ result = n
+╰─ n
+
+# Sum of array
+╭─ sum : [n]F64 → F64
+╰─ ₀ Σ
+
+# Product of array
+╭─ product : [n]F64 → F64
+╰─ ₀ Π
+
+# Map function over array
+╭─ map : (A → B) → [n]A → [n]B
+╰─ ₁ ↦ ₀
+
+# Filter array by predicate
+╭─ filter : (T → Bool) → [n]T → ∃m. [m]T
+│  ⊨ m ≤ n
+╰─ ₁ ▸ ₀
+
+# Fold left
+╭─ foldl : (B → A → B) → B → [n]A → B
+╰─ match ₀
+     [] → ₁
+     [x|xs] → foldl ₂ (₂ ₁ x) xs
+
+# Quicksort
+╭─ qsort : [n]T → [n]T
+│  where T: Ord
+│  ⊨ sorted result
+│  ⊨ permutation ₀ result
+╰─ match ₀
+     [] → []
+     [p|xs] → (qsort (xs ▸ (< p))) ⊕ [p] ⊕ (qsort (xs ▸ (≥ p)))
+
+# Matrix multiplication
+╭─ matmul : [m n]F64 → [n p]F64 → [m p]F64
+│  ⊢ shapes compatible
+│  ⊨ result[i,j] = Σₖ ₀[i,k] × ₁[k,j]
+╰─ ⊥prim  #- optimized BLAS implementation -#
+
+# Transpose
+╭─ transpose : [m n]T → [n m]T
+│  ⊨ result[i,j] = ₀[j,i]
+╰─ ⊥prim
+
+# Element-wise operations (via typeclass)
+class Num τ where
+  (+) : τ → τ → τ
+  (×) : τ → τ → τ
+  zero : τ
+  one : τ
+
+impl Num F64 where
+  (+) ← float_add
+  (×) ← float_mul
+  zero ← 0.0
+  one ← 1.0
+
+impl Num [n]F64 where
+  (+) ← λ→ ₁ ⊕ ₀
+  (×) ← λ→ ₁ ⊗ ₀
+  zero ← [n]⊢0.0
+  one ← [n]⊢1.0

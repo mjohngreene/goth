@@ -1,0 +1,80 @@
+# Goth Standard Library: Arithmetic
+# Basic arithmetic operations with interval types
+
+# Addition (primitive wrapper with spec)
+╭─ add : F64 → F64 → F64
+╰─ ₀ + ₁
+
+# Subtraction
+╭─ sub : F64 → F64 → F64
+╰─ ₀ - ₁
+
+# Multiplication
+╭─ mul : F64 → F64 → F64
+╰─ ₀ × ₁
+
+# Division (guarded: denominator excludes zero)
+╭─ div : F64 → F64⊢(-∞..0)∪(0..∞) → F64
+╰─ ₀ / ₁
+
+# Absolute value
+╭─ abs : F64 → F64⊢[0..∞)
+╰─ if ₀ ≥ 0 then ₀ else -₀
+
+# Power (natural exponent)
+╭─ pow : F64 → ℕ → F64
+╰─ match ₁
+     0 → 1
+     n → ₀ × pow ₀ (n - 1)
+
+# Exponential (primitive)
+╭─ exp : F64 → F64⊢(0..∞)
+│  ⊨ result = Σₙ (₀ⁿ / n!)
+╰─ ⊥prim
+
+# Natural log
+╭─ ln : F64⊢(0..∞) → F64
+│  ⊨ exp result = ₀
+╰─ ⊥prim
+
+# Power (real exponent, via exp/ln)
+╭─ (^) : F64⊢(0..∞) → F64 → F64
+╰─ exp (₁ × ln ₀)
+
+# Log base b
+╭─ log : F64⊢(0..∞) → F64⊢(0..∞) → F64
+╰─ ln ₀ / ln ₁
+
+# Square root
+╭─ sqrt : F64⊢[0..∞) → F64⊢[0..∞)
+│  ⊨ result × result = ₀
+╰─ ₀ ^ 0.5
+
+# Dot product
+╭─ dot : [n]F64 → [n]F64 → F64
+╰─ ₀ ⊗ ₁ Σ
+
+# Vector norm
+╭─ norm : [n]F64 → F64⊢[0..∞)
+╰─ sqrt (₀ ⊗ ₀ Σ)
+
+# Normalize vector
+╭─ normalize : [n]F64 → [n]F64
+│  where n > 0
+│  ⊨ ‖result‖ = 1
+╰─ ₀ / ‖₀‖
+
+# Sigmoid
+╭─ sigmoid : F64 → F64⊢[0..1]
+╰─ 1 / (1 + exp (-₀))
+
+# ReLU
+╭─ relu : F64 → F64⊢[0..∞)
+╰─ if ₀ > 0 then ₀ else 0
+
+# Softmax
+╭─ softmax : [n]F64 → [n]F64⊢[0..1]
+│  where n > 0
+│  ⊨ Σ result = 1
+╰─ let ex ← ₀ ↦ exp in
+   ex / (ex Σ)
