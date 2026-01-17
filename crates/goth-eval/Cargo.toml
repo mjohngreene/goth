@@ -1,0 +1,15 @@
+[package]
+name = "goth-eval"
+version = "0.1.0"
+edition = "2021"
+description = "Interpreter for the Goth programming language"
+license = "MIT"
+repository = "https://github.com/goth-lang/goth"
+
+[dependencies]
+goth-ast = { path = "../goth-ast" }
+thiserror = "1.0"
+ordered-float = { version = "4.2", features = ["serde"] }
+
+[dev-dependencies]
+pretty_assertions = "1.4"
