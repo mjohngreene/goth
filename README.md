@@ -3,6 +3,27 @@
 
 `goth` is an LLM-native programming language designed for efficient code generation by large language models.
 
+## Usage
+
+REPL shell:
+
+```sh
+$ goth
+```
+
+Compiler:
+
+```sh
+$ btggf
+```
+
+More thoughts:
+* posits, bfloat16, TensorFloat-32
+* GPU intrinsics
+* SIMD intrinsics
+* Memory layout
+* terminal with Ani-like assistant
+
 ---
 
 I've wondered idly for a while about what a language optimized for LLMs rather than humans would look like.  Now, the priests of the machine spirits still need to be able to read the language, so it needs a legible representation (as opposed to a blast of static).  But we can play with other parameters in order to make it legible.  In fact, a very few people have started to play this game (like [LMQL](https://lmql.ai/)).  So, what the heck, let's just build a new language from scratch over the weekend.
