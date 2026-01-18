@@ -8,6 +8,8 @@ $ cargo build
 $ cargo test
 ```
 
+© 2026 Sigilante.  Goth is made available under the MIT License.
+
 ## Usage
 
 REPL shell:
@@ -26,7 +28,9 @@ cargo run --package goth-ast --example roundtrip_validation
 
 ## Status
 
-`goth` was born on 2026-01-16.  The alpha version of the language and interpreter were completed on 2026-01-17.
+`goth` is an experiment in language design and exotic syntax.  It targets certain desiderata for a language that is human readable but optimized for LLM characteristics.
+
+`goth` was born on 2026-01-16.  The alpha version of the language and interpreter were completed on 2026-01-17.  Type checking was implemented from 2026-01-17 to 2026-01-18.  The compiler was implemented starting on 2026-01-18.
 
 ### Fully Implemented
 
@@ -85,47 +89,50 @@ cargo run --package goth-ast --example roundtrip_validation
 * [Philosophy](./docs/PHILOSOPHY.md)
 
 Here's the target compilation pipeline:
-│             GOTH TOOLCHAIN              │
+
+```
+┌──────────────────────────────────────┐
+│            GOTH TOOLCHAIN            │
 └──────────────────────────────────────┘
                                      
 ┌─────────┐  ┌─────────┐  ┌─────────┐                      
-│  .goth   │  │ .gast   │  │ .gbin   │    ← Source formats  
+│ .goth   │  │ .gast   │  │ .gbin   │    ← Source formats  
 └────┬────┘  └────┬────┘  └────┬────┘                      
-     │             │             │                           
+     │            │            │                           
      └────────────┼────────────┘                           
                    ↓                                        
            ┌──────────────┐                                
-           │    GOTH AST   │  ← Canonical in-memory repr    
-           │     (DAG)     │                                
+           │   GOTH AST   │  ← Canonical in-memory repr    
+           │    (DAG)     │                                
            └──────┬───────┘                                
                    ↓                                        
            ┌──────────────┐    ┌───────┐                   
-           │   Typecheck   │←──→│  Z3   │  ← SMT for        
-           │   + Constrain │    └───────┘    intervals,     
+           │  Typecheck   │←──→│  Z3   │  ← SMT for        
+           │  + Constrain │    └───────┘    intervals,     
            └──────┬───────┘                 shapes,        
-                   ↓                         refinements    
+               ↓                         refinements    
            ┌──────────────┐                                
-           │   Typed AST   │  ← All types resolved          
+           │  Typed AST   │  ← All types resolved          
+           └──────┬───────┘                                
+                  ↓                                        
+           ┌──────────────┐                                
+           │  Monomorph   │  ← Specialize generics         
+           │  + Closure   │    Convert closures            
+           └──────┬───────┘                                
+                 ↓                                        
+           ┌──────────────┐                                
+           │   GOTH MIR   │  ← Low-level, explicit         
            └──────┬───────┘                                
                    ↓                                        
            ┌──────────────┐                                
-           │   Monomorph   │  ← Specialize generics         
-           │   + Closure   │    Convert closures            
+           │     MLIR     │  ← tensor, affine, scf         
            └──────┬───────┘                                
-                   ↓                                        
+                  ↓                                        
            ┌──────────────┐                                
-           │    GOTH MIR   │  ← Low-level, explicit         
+           │   LLVM IR    │                                
            └──────┬───────┘                                
-                   ↓                                        
+                  ↓                                        
            ┌──────────────┐                                
-           │      MLIR     │  ← tensor, affine, scf         
-           └──────┬───────┘                                
-                   ↓                                        
-           ┌──────────────┐                                
-           │    LLVM IR    │                                
-           └──────┬───────┘                                
-                   ↓                                        
-           ┌──────────────┐                                
-           │    Machine    │                                
+           │   Machine    │                                
            └──────────────┘
 ```
