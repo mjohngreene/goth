@@ -9,6 +9,7 @@ use clap::Parser;
 use colored::Colorize;
 use goth_eval::prelude::*;
 use goth_parse::prelude::*;
+use goth_check::TypeChecker;
 use rustyline::error::ReadlineError;
 use rustyline::{DefaultEditor, Result as RlResult};
 use std::fs;
@@ -194,6 +195,7 @@ fn run_repl(trace: bool) -> RlResult<()> {
     }
 
     let mut evaluator = Evaluator::new();
+    let mut type_checker = TypeChecker::new();
     if trace {
         evaluator = evaluator.with_trace(true);
     }
@@ -203,10 +205,10 @@ fn run_repl(trace: bool) -> RlResult<()> {
 
     loop {
         let prompt = if accumulated.is_empty() {
-            format!("{} ", format!("goth[{}]›", line_count).cyan())
+            format!("{} ", format!("𝖌𝖔𝖙𝖍[{}]›", line_count).cyan())
         } else {
             // Continuation prompt - colorize dots to distinguish from input
-            let main_prompt = format!("goth[{}]›", line_count);
+            let main_prompt = format!("𝖌𝖔𝖙𝖍[{}]›", line_count);
             let width = main_prompt.len();
             let dots = format!("{}", ".".repeat(width).dimmed());
             format!("{} ", dots)
@@ -235,13 +237,13 @@ fn run_repl(trace: bool) -> RlResult<()> {
 
                 // Handle REPL commands
                 if input.starts_with(':') {
-                    handle_command(input, &mut evaluator, trace);
+                    handle_command(input, &mut evaluator, &mut type_checker, trace);
                     accumulated.clear();
                     continue;
                 }
 
                 // Try to parse and evaluate
-                match parse_and_eval(input, &mut evaluator) {
+                match parse_and_eval(input, &mut evaluator, &mut type_checker) {
                     Ok(Some(value)) => {
                         print_value(&value);
                         // Bind result to _
@@ -277,7 +279,7 @@ fn run_repl(trace: bool) -> RlResult<()> {
     Ok(())
 }
 
-fn parse_and_eval(input: &str, evaluator: &mut Evaluator) -> Result<Option<Value>, String> {
+fn parse_and_eval(input: &str, evaluator: &mut Evaluator, type_checker: &mut TypeChecker) -> Result<Option<Value>, String> {
     // Try parsing as let declaration first
     if input.starts_with("let ") {
         // Check if it's a top-level let (no 'in')
@@ -291,6 +293,12 @@ fn parse_and_eval(input: &str, evaluator: &mut Evaluator) -> Result<Option<Value
                             let value = evaluator.eval(&let_decl.value)
                                 .map_err(|e| e.to_string())?;
                             evaluator.define(let_decl.name.to_string(), value.clone());
+                            
+                            // Also infer type and add to type checker
+                            if let Ok(ty) = type_checker.infer(&let_decl.value) {
+                                type_checker.define(let_decl.name.to_string(), ty);
+                            }
+                            
                             println!("{} {} = {}", "let".cyan(), let_decl.name, value);
                         }
                     }
@@ -317,6 +325,8 @@ fn parse_and_eval(input: &str, evaluator: &mut Evaluator) -> Result<Option<Value
                             fn_decl.postconditions.clone()
                         );
                         evaluator.define(fn_decl.name.to_string(), closure);
+                        // Also add to type checker!
+                        type_checker.define(fn_decl.name.to_string(), fn_decl.signature.clone());
                         println!("{} {} : {}", "fn".cyan(), fn_decl.name, fn_decl.signature);
                     }
                 }
@@ -333,7 +343,7 @@ fn parse_and_eval(input: &str, evaluator: &mut Evaluator) -> Result<Option<Value
     Ok(Some(value))
 }
 
-fn handle_command(cmd: &str, evaluator: &mut Evaluator, _trace: bool) {
+fn handle_command(cmd: &str, evaluator: &mut Evaluator, type_checker: &mut TypeChecker, _trace: bool) {
     let parts: Vec<&str> = cmd.splitn(2, ' ').collect();
     let command = parts[0];
     let arg = parts.get(1).map(|s| s.trim());
@@ -362,9 +372,9 @@ fn handle_command(cmd: &str, evaluator: &mut Evaluator, _trace: bool) {
                 match parse_expr(expr_str) {
                     Ok(expr) => {
                         let resolved = resolve_expr(expr);
-                        match evaluator.eval(&resolved) {
-                            Ok(value) => println!("{}", value.type_name().cyan()),
-                            Err(e) => eprintln!("{}: {}", "Error".red().bold(), e),
+                        match type_checker.infer(&resolved) {
+                            Ok(ty) => println!("{}", ty),
+                            Err(e) => eprintln!("{}: {}", "Type error".red().bold(), e),
                         }
                     }
                     Err(e) => eprintln!("{}: {}", "Parse error".red().bold(), e),
@@ -375,6 +385,7 @@ fn handle_command(cmd: &str, evaluator: &mut Evaluator, _trace: bool) {
         }
         ":clear" => {
             *evaluator = Evaluator::new();
+            *type_checker = TypeChecker::new();
             println!("{}", "Environment cleared.".yellow());
         }
         ":load" | ":l" => {
@@ -580,7 +591,7 @@ fn is_complete(input: &str) -> bool {
 fn print_banner() {
     println!("{}", r#"
    ╔═══════════════════════════════════════╗
-   ║             𝔊𝔬𝔱𝔥  v0.1.0              ║
+   ║             𝖌𝖔𝖙𝖍  v0.1.0              ║
    ║   Functional • Tensors • Refinements  ║
    ╚═══════════════════════════════════════╝
 "#.cyan());
