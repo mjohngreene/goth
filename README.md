@@ -76,10 +76,19 @@ So, ladies and gentlemen, please meet (for the first time in our material plane)
 Here's a multi-line function with conditions:
 
 ```
-╭─ normalize : [n]F64 → [n]F64
-│  where n > 0
-│  ⊨ ‖result‖ = 1
-╰─ ₀ / ‖₀‖
+goth[0]›
+╭─ normalize : [n]F → [n]F
+│  ⊢ len ₀ > 0
+│  ⊨ abs(norm ₀ - sqrt(len ₁)) < 0.0001
+╰─ let arr ← ₀ ;
+       n ← len arr ;
+       μ ← sum arr / n ;
+       σ ← sqrt(sum ((arr ↦ (λ→ ₀ - μ)) ↦ (λ→ ₀ × ₀)) / n)
+   in (arr ↦ (λ→ ₀ - μ)) ↦ (λ→ ₀ / σ)
+goth[1]› normalize([1.0, 2.0, 3.0, 4.0, 5.0])
+[-1.414213562373095 -0.7071067811865475 0 0.7071067811865475 1.414213562373095]
+goth[2]› norm(normalize([1.0, 2.0, 3.0, 4.0, 5.0]))
+2.2360679774997894
 ```
 
 Here is a higher-order function:

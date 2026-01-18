@@ -59,7 +59,7 @@ impl<'a> Parser<'a> {
 
     fn expect_ident(&mut self) -> ParseResult<String> {
         match self.next() {
-            Some(Token::Ident(s)) => Ok(s),
+            Some(Token::Ident(s)) | Some(Token::TyVar(s)) => Ok(s),
             other => Err(ParseError::Unexpected {
                 found: other,
                 expected: "identifier".into(),
@@ -92,31 +92,34 @@ impl<'a> Parser<'a> {
         let mut lhs = self.parse_prefix()?;
 
         loop {
-            let op = match self.peek() {
-                Some(t) if t.is_binop() => t.clone(),
-                _ => break,
-            };
-
-            let (l_bp, r_bp) = self.infix_binding_power(&op);
-            if l_bp < min_bp {
-                break;
-            }
-
-            self.next(); // consume operator
-            let rhs = self.parse_expr_bp(r_bp)?;
-            lhs = self.make_binop(op, lhs, rhs);
-        }
-
-        // Handle function application (juxtaposition)
-        while self.peek().map(|t| t.can_start_expr()).unwrap_or(false) {
-            // Check it's not a binary operator we should handle at a higher level
+            // Try infix operators first
             if let Some(t) = self.peek() {
                 if t.is_binop() {
-                    break;
+                    let op = t.clone();
+                    let (l_bp, r_bp) = self.infix_binding_power(&op);
+                    if l_bp >= min_bp {
+                        self.next(); // consume operator
+                        let rhs = self.parse_expr_bp(r_bp)?;
+                        lhs = self.make_binop(op, lhs, rhs);
+                        continue; // Check for more operators/applications
+                    }
                 }
             }
-            let arg = self.parse_atom()?;
-            lhs = Expr::App(Box::new(lhs), Box::new(arg));
+
+            // Try function application (juxtaposition)
+            if self.peek().map(|t| t.can_start_expr()).unwrap_or(false) {
+                if let Some(t) = self.peek() {
+                    if t.is_binop() {
+                        break; // Let infix handle it
+                    }
+                }
+                let arg = self.parse_atom()?;
+                lhs = Expr::App(Box::new(lhs), Box::new(arg));
+                continue; // Check for more operators/applications
+            }
+
+            // No more operators or applications
+            break;
         }
 
         // Handle postfix operators AFTER infix and application
@@ -189,8 +192,8 @@ impl<'a> Parser<'a> {
             // De Bruijn index
             Some(Token::Index(i)) => { self.next(); Expr::Idx(i) }
 
-            // Identifier
-            Some(Token::Ident(name)) => { self.next(); Expr::Name(name.into()) }
+            // Identifier (including Greek letters used as variable names)
+            Some(Token::Ident(name)) | Some(Token::TyVar(name)) => { self.next(); Expr::Name(name.into()) }
 
             // Lambda
             Some(Token::Lambda) => self.parse_lambda()?,
@@ -237,7 +240,7 @@ impl<'a> Parser<'a> {
                 Some(Token::Dot) => {
                     self.next();
                     match self.next() {
-                        Some(Token::Ident(name)) => {
+                        Some(Token::Ident(name)) | Some(Token::TyVar(name)) => {
                             expr = Expr::Field(Box::new(expr), FieldAccess::Named(name.into()));
                         }
                         Some(Token::Int(i)) => {
@@ -398,7 +401,13 @@ impl<'a> Parser<'a> {
             
             loop {
                 let name = self.expect_ident()?;
-                self.expect(Token::Eq)?;
+                // Accept either = or ← for bindings
+                if !self.eat(&Token::Eq) && !self.eat(&Token::BackArrow) {
+                    return Err(ParseError::Unexpected {
+                        found: self.peek().cloned(),
+                        expected: "'=' or '←'".into(),
+                    });
+                }
                 let value = self.parse_expr()?;
                 let name_box: Box<str> = name.into();
                 bindings.push((Pattern::Var(Some(name_box)), value));
@@ -425,16 +434,63 @@ impl<'a> Parser<'a> {
             let body = self.parse_expr()?;
             Ok(Expr::LetRec { bindings, body: Box::new(body) })
         } else {
+            // Parse first binding
             let pattern = self.parse_pattern()?;
-            self.expect(Token::Eq)?;
+            // Accept either = or ← for let bindings
+            if !self.eat(&Token::Eq) && !self.eat(&Token::BackArrow) {
+                return Err(ParseError::Unexpected {
+                    found: self.peek().cloned(),
+                    expected: "'=' or '←'".into(),
+                });
+            }
             let value = self.parse_expr()?;
-            self.expect(Token::In)?;
-            let body = self.parse_expr()?;
-            Ok(Expr::Let {
-                pattern,
-                value: Box::new(value),
-                body: Box::new(body),
-            })
+            
+            // Check for semicolon - indicates sequential bindings
+            if self.eat(&Token::Semi) {
+                // Build nested let expressions from sequential bindings
+                let mut bindings = vec![(pattern, value)];
+                
+                // Parse additional bindings until we see 'in'
+                while !self.at(&Token::In) && self.peek().is_some() {
+                    let pat = self.parse_pattern()?;
+                    if !self.eat(&Token::Eq) && !self.eat(&Token::BackArrow) {
+                        return Err(ParseError::Unexpected {
+                            found: self.peek().cloned(),
+                            expected: "'=' or '←'".into(),
+                        });
+                    }
+                    let val = self.parse_expr()?;
+                    bindings.push((pat, val));
+                    
+                    // Only continue if there's a semicolon
+                    if !self.eat(&Token::Semi) {
+                        break;
+                    }
+                }
+                
+                self.expect(Token::In)?;
+                let mut body = self.parse_expr()?;
+                
+                // Build nested lets from right to left
+                for (pat, val) in bindings.into_iter().rev() {
+                    body = Expr::Let {
+                        pattern: pat,
+                        value: Box::new(val),
+                        body: Box::new(body),
+                    };
+                }
+                
+                Ok(body)
+            } else {
+                // Single binding - original behavior
+                self.expect(Token::In)?;
+                let body = self.parse_expr()?;
+                Ok(Expr::Let {
+                    pattern,
+                    value: Box::new(value),
+                    body: Box::new(body),
+                })
+            }
         }
     }
 
@@ -510,7 +566,13 @@ impl<'a> Parser<'a> {
                 Some(Token::Let) => {
                     self.next();
                     let pat = self.parse_pattern()?;
-                    self.expect(Token::Eq)?;
+                    // Accept either = or ← for bindings
+                    if !self.eat(&Token::Eq) && !self.eat(&Token::BackArrow) {
+                        return Err(ParseError::Unexpected {
+                            found: self.peek().cloned(),
+                            expected: "'=' or '←'".into(),
+                        });
+                    }
                     let e = self.parse_expr()?;
                     DoOp::Let(pat, e)
                 }
@@ -586,7 +648,7 @@ impl<'a> Parser<'a> {
             Some(Token::True) => { self.next(); Ok(Pattern::Lit(Literal::True)) }
             Some(Token::False) => { self.next(); Ok(Pattern::Lit(Literal::False)) }
 
-            Some(Token::Ident(name)) => {
+            Some(Token::Ident(name)) | Some(Token::TyVar(name)) => {
                 self.next();
                 // Check if it's a variant constructor (starts with uppercase)
                 if name.chars().next().map(|c| c.is_uppercase()).unwrap_or(false) {
@@ -794,7 +856,7 @@ impl<'a> Parser<'a> {
         while !self.at(&Token::RBracket) {
             let dim = match self.peek().cloned() {
                 Some(Token::Int(n)) => { self.next(); Dim::Const(n as u64) }
-                Some(Token::Ident(name)) => { self.next(); Dim::Var(name.into()) }
+                Some(Token::Ident(name)) | Some(Token::TyVar(name)) => { self.next(); Dim::Var(name.into()) }
                 _ => break,
             };
             dims.push(dim);

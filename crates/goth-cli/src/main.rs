@@ -7,7 +7,6 @@
 
 use clap::Parser;
 use colored::Colorize;
-use goth_check::TypeChecker;
 use goth_eval::prelude::*;
 use goth_parse::prelude::*;
 use rustyline::error::ReadlineError;
@@ -146,7 +145,7 @@ fn run_module(module: &goth_ast::decl::Module, trace: bool) {
                 let closure = Value::closure_with_contracts(
                     1, 
                     fn_decl.body.clone(), 
-                    Env::new(),
+                    Env::with_globals(evaluator.globals()),
                     fn_decl.preconditions.clone(),
                     fn_decl.postconditions.clone()
                 );
@@ -291,7 +290,7 @@ fn parse_and_eval(input: &str, evaluator: &mut Evaluator) -> Result<Option<Value
                         let closure = Value::closure_with_contracts(
                             1,
                             fn_decl.body.clone(),
-                            Env::new(),
+                            Env::with_globals(evaluator.globals()),
                             fn_decl.preconditions.clone(),
                             fn_decl.postconditions.clone()
                         );
@@ -341,15 +340,15 @@ fn handle_command(cmd: &str, evaluator: &mut Evaluator, _trace: bool) {
                 match parse_expr(expr_str) {
                     Ok(expr) => {
                         let resolved = resolve_expr(expr);
-                        let mut checker = TypeChecker::new();
-                        // Copy global bindings from evaluator
-                        match checker.infer(&resolved) {
-                            Ok(ty) => println!("{}", ty),
-                            Err(e) => eprintln!("Type error: {}", e),
+                        match evaluator.eval(&resolved) {
+                            Ok(value) => println!("{}", value.type_name().cyan()),
+                            Err(e) => eprintln!("{}: {}", "Error".red().bold(), e),
                         }
                     }
-                    Err(e) => eprintln!("Parse error: {}", e),
+                    Err(e) => eprintln!("{}: {}", "Parse error".red().bold(), e),
                 }
+            } else {
+                eprintln!("Usage: :type <expression>");
             }
         }
         ":clear" => {
@@ -375,7 +374,7 @@ fn handle_command(cmd: &str, evaluator: &mut Evaluator, _trace: bool) {
                                             let closure = Value::closure_with_contracts(
                                                 1,
                                                 fn_decl.body.clone(),
-                                                Env::new(),
+                                                Env::with_globals(evaluator.globals()),
                                                 fn_decl.preconditions.clone(),
                                                 fn_decl.postconditions.clone()
                                             );
