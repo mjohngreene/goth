@@ -14,6 +14,7 @@ REPL shell:
 
 ```sh
 $ goth
+```
 
 ## Status
 
