@@ -14,6 +14,26 @@ use rustyline::{DefaultEditor, Result as RlResult};
 use std::fs;
 use std::path::PathBuf;
 
+/// Count the arity of a function type (number of arguments)
+/// For example: F → F → F has arity 2
+fn count_function_arity(ty: &goth_ast::types::Type) -> u32 {
+    let mut arity = 0u32;
+    let mut current = ty;
+    
+    loop {
+        match current {
+            goth_ast::types::Type::Fn(_arg, ret) => {
+                arity += 1;
+                current = ret;
+            }
+            _ => break,
+        }
+    }
+    
+    // If no function arrows found, it's a value (arity 0), but for closures we need at least 1
+    arity.max(1)
+}
+
 #[derive(Parser, Debug)]
 #[command(name = "goth")]
 #[command(author = "Goth Language")]
@@ -142,8 +162,9 @@ fn run_module(module: &goth_ast::decl::Module, trace: bool) {
                 }
             }
             Decl::Fn(fn_decl) => {
+                let arity = count_function_arity(&fn_decl.signature);
                 let closure = Value::closure_with_contracts(
-                    1, 
+                    arity, 
                     fn_decl.body.clone(), 
                     Env::with_globals(evaluator.globals()),
                     fn_decl.preconditions.clone(),
@@ -287,8 +308,9 @@ fn parse_and_eval(input: &str, evaluator: &mut Evaluator) -> Result<Option<Value
                 let module = resolve_module(module);
                 for decl in module.decls {
                     if let goth_ast::decl::Decl::Fn(fn_decl) = decl {
+                        let arity = count_function_arity(&fn_decl.signature);
                         let closure = Value::closure_with_contracts(
-                            1,
+                            arity,
                             fn_decl.body.clone(),
                             Env::with_globals(evaluator.globals()),
                             fn_decl.preconditions.clone(),
@@ -371,8 +393,9 @@ fn handle_command(cmd: &str, evaluator: &mut Evaluator, _trace: bool) {
                                             }
                                         }
                                         goth_ast::decl::Decl::Fn(fn_decl) => {
+                                            let arity = count_function_arity(&fn_decl.signature);
                                             let closure = Value::closure_with_contracts(
-                                                1,
+                                                arity,
                                                 fn_decl.body.clone(),
                                                 Env::with_globals(evaluator.globals()),
                                                 fn_decl.preconditions.clone(),

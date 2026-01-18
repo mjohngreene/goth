@@ -14,6 +14,7 @@ pub enum BinOp {
     Div,      // /
     Pow,      // ^
     Mod,      // %
+    PlusMinus, // ± (uncertain value)
 
     // Comparison
     Eq,       // =
@@ -49,6 +50,9 @@ pub enum UnaryOp {
     Sum,      // Σ (fold with +)
     Prod,     // Π (fold with ×)
     Scan,     // ⍀ (prefix fold)
+    Sqrt,     // √ (square root)
+    Floor,    // ⌊⌋ (floor)
+    Ceil,     // ⌈⌉ (ceiling)
 }
 
 /// Operator associativity
@@ -79,6 +83,7 @@ impl BinOp {
             BinOp::Div => "/",
             BinOp::Pow => "^",
             BinOp::Mod => "%",
+            BinOp::PlusMinus => "±",
             BinOp::Eq => "=",
             BinOp::Neq => "≠",
             BinOp::Lt => "<",
@@ -106,6 +111,7 @@ impl BinOp {
             BinOp::Div => "/",
             BinOp::Pow => "^",
             BinOp::Mod => "%",
+            BinOp::PlusMinus => "+-",
             BinOp::Eq => "==",
             BinOp::Neq => "/=",
             BinOp::Lt => "<",
@@ -129,7 +135,7 @@ impl BinOp {
         match self {
             BinOp::Pow => 10,
             BinOp::Mul | BinOp::Div | BinOp::Mod | BinOp::ZipWith => 9,
-            BinOp::Add | BinOp::Sub | BinOp::Concat => 8,
+            BinOp::Add | BinOp::Sub | BinOp::PlusMinus | BinOp::Concat => 8,
             BinOp::Eq | BinOp::Neq | BinOp::Lt | BinOp::Gt | BinOp::Leq | BinOp::Geq => 7,
             BinOp::And => 6,
             BinOp::Or => 5,
@@ -156,6 +162,9 @@ impl UnaryOp {
             UnaryOp::Sum => "Σ",
             UnaryOp::Prod => "Π",
             UnaryOp::Scan => "⍀",
+            UnaryOp::Sqrt => "√",
+            UnaryOp::Floor => "⌊⌋",
+            UnaryOp::Ceil => "⌈⌉",
         }
     }
 
@@ -166,6 +175,9 @@ impl UnaryOp {
             UnaryOp::Sum => "+/",
             UnaryOp::Prod => "*/",
             UnaryOp::Scan => "\\/",
+            UnaryOp::Sqrt => "sqrt",
+            UnaryOp::Floor => "floor",
+            UnaryOp::Ceil => "ceil",
         }
     }
 }

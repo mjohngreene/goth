@@ -9,6 +9,7 @@ pub fn apply_binop(op: &goth_ast::op::BinOp, left: Value, right: Value) -> EvalR
     match op {
         Add => add(left, right), Sub => sub(left, right), Mul => mul(left, right),
         Div => div(left, right), Pow => pow(left, right), Mod => modulo(left, right),
+        PlusMinus => Ok(Value::Uncertain { value: Box::new(left), uncertainty: Box::new(right) }),
         Eq => Ok(Value::Bool(left.deep_eq(&right))), Neq => Ok(Value::Bool(!left.deep_eq(&right))),
         Lt => compare_lt(left, right), Gt => compare_gt(left, right),
         Leq => compare_leq(left, right), Geq => compare_geq(left, right),
@@ -21,7 +22,16 @@ pub fn apply_binop(op: &goth_ast::op::BinOp, left: Value, right: Value) -> EvalR
 
 pub fn apply_unaryop(op: &goth_ast::op::UnaryOp, value: Value) -> EvalResult<Value> {
     use goth_ast::op::UnaryOp::*;
-    match op { Neg => negate(value), Not => logical_not(value), Sum => sum(value), Prod => product(value), Scan => scan(value) }
+    match op { 
+        Neg => negate(value), 
+        Not => logical_not(value), 
+        Sum => sum(value), 
+        Prod => product(value), 
+        Scan => scan(value),
+        Sqrt => sqrt(value),
+        Floor => floor(value),
+        Ceil => ceil(value),
+    }
 }
 
 pub fn apply_prim(prim: PrimFn, args: Vec<Value>) -> EvalResult<Value> {

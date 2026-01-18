@@ -22,6 +22,7 @@ pub enum Value {
     Partial { func: Box<Value>, args: Vec<Value>, remaining: usize },
     Thunk(Thunk),
     Ref(Rc<RefCell<Value>>),
+    Uncertain { value: Box<Value>, uncertainty: Box<Value> },
     Error(String),
 }
 
@@ -122,7 +123,7 @@ impl Value {
             Value::Tuple(_) => "Tuple", Value::Record(_) => "Record", Value::Variant { .. } => "Variant",
             Value::Closure(_) => "Closure", Value::Primitive(_) => "Primitive",
             Value::Partial { .. } => "Partial", Value::Thunk(_) => "Thunk",
-            Value::Ref(_) => "Ref", Value::Error(_) => "Error",
+            Value::Ref(_) => "Ref", Value::Uncertain { .. } => "Uncertain", Value::Error(_) => "Error",
         }
     }
 
@@ -137,6 +138,9 @@ impl Value {
             (Value::Tuple(a), Value::Tuple(b)) => a.len() == b.len() && a.iter().zip(b).all(|(x, y)| x.deep_eq(y)),
             (Value::Variant { tag: t1, payload: p1 }, Value::Variant { tag: t2, payload: p2 }) => {
                 t1 == t2 && match (p1, p2) { (None, None) => true, (Some(a), Some(b)) => a.deep_eq(b), _ => false }
+            }
+            (Value::Uncertain { value: v1, uncertainty: u1 }, Value::Uncertain { value: v2, uncertainty: u2 }) => {
+                v1.deep_eq(v2) && u1.deep_eq(u2)
             }
             _ => false,
         }
@@ -286,6 +290,7 @@ impl std::fmt::Display for Value {
             Value::Partial { remaining, .. } => write!(f, "<partial/{}>", remaining),
             Value::Thunk(_) => write!(f, "<thunk>"),
             Value::Ref(_) => write!(f, "<ref>"),
+            Value::Uncertain { value, uncertainty } => write!(f, "{}±{}", value, uncertainty),
             Value::Error(msg) => write!(f, "Error: {}", msg),
         }
     }

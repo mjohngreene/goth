@@ -137,6 +137,16 @@ pub enum Token {
     Percent,
     #[token("±")]
     PlusMinus,
+    #[token("√")]
+    Sqrt,
+    #[token("⌊")]
+    Floor,
+    #[token("⌋")]
+    FloorClose,
+    #[token("⌈")]
+    Ceil,
+    #[token("⌉")]
+    CeilClose,
 
     // ============ Comparison ============
     #[token("=")]
@@ -406,7 +416,7 @@ impl Token {
             Token::And => Some(4),
             Token::Eq | Token::Neq | Token::Lt | Token::Gt | Token::Leq | Token::Geq => Some(5),
             Token::Concat => Some(6),
-            Token::Plus | Token::Minus => Some(7),
+            Token::Plus | Token::Minus | Token::PlusMinus => Some(7),
             Token::Star | Token::Slash | Token::Percent | Token::ZipWith => Some(8),
             Token::Caret => Some(9),
             Token::Compose => Some(10),

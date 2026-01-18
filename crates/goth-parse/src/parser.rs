@@ -174,6 +174,23 @@ impl<'a> Parser<'a> {
                 self.expect(Token::Norm)?;
                 Ok(Expr::Norm(Box::new(operand)))
             }
+            Some(Token::Sqrt) => {
+                self.next();
+                let operand = self.parse_prefix()?;
+                Ok(Expr::UnaryOp(UnaryOp::Sqrt, Box::new(operand)))
+            }
+            Some(Token::Floor) => {
+                self.next();
+                let operand = self.parse_expr()?;
+                self.expect(Token::FloorClose)?;
+                Ok(Expr::UnaryOp(UnaryOp::Floor, Box::new(operand)))
+            }
+            Some(Token::Ceil) => {
+                self.next();
+                let operand = self.parse_expr()?;
+                self.expect(Token::CeilClose)?;
+                Ok(Expr::UnaryOp(UnaryOp::Ceil, Box::new(operand)))
+            }
             _ => self.parse_atom(),
         }
     }
@@ -599,6 +616,7 @@ impl<'a> Parser<'a> {
             Token::Slash => BinOp::Div,
             Token::Caret => BinOp::Pow,
             Token::Percent => BinOp::Mod,
+            Token::PlusMinus => BinOp::PlusMinus,
             Token::Eq => BinOp::Eq,
             Token::Neq => BinOp::Neq,
             Token::Lt => BinOp::Lt,
@@ -802,6 +820,74 @@ impl<'a> Parser<'a> {
                     Ok(Type::Tuple(fields))
                 } else {
                     self.expect(Token::RParen)?;
+                    Ok(first)
+                }
+            }
+
+            // Angle bracket tuple type ⟨T, U, V⟩ or record type ⟨x: T, y: U⟩
+            Some(Token::LAngle) => {
+                self.next();
+                if self.eat(&Token::RAngle) {
+                    return Ok(Type::Tuple(vec![]));  // Empty tuple ⟨⟩
+                }
+                
+                // Simple approach: try to parse as unnamed tuple first
+                // If we see Ident/TyVar, check next token
+                // But we can't easily backtrack, so let's be smarter:
+                // Parse first element, check if followed by colon (record) or comma/rangle (tuple)
+                
+                // Try parsing as record if first thing looks like "name:"
+                if let Some(Token::Ident(name)) | Some(Token::TyVar(name)) = self.peek().cloned() {
+                    self.next();
+                    if self.at(&Token::Colon) {
+                        // It's a record! name: Type
+                        self.expect(Token::Colon)?;
+                        let ty = self.parse_type()?;
+                        let mut fields = vec![TupleField { label: Some(name.into()), ty }];
+                        
+                        while self.eat(&Token::Comma) {
+                            let label = self.expect_ident()?;
+                            self.expect(Token::Colon)?;
+                            let ty = self.parse_type()?;
+                            fields.push(TupleField { label: Some(label.into()), ty });
+                        }
+                        
+                        self.expect(Token::RAngle)?;
+                        return Ok(Type::Tuple(fields));
+                    }
+                    // Not a colon, so this identifier is actually a type variable
+                    // Continue parsing it as an unnamed tuple with this type var as first element
+                    let first_ty = Type::Var(name.into());
+                    if self.eat(&Token::Comma) {
+                        let mut fields = vec![TupleField { label: None, ty: first_ty }];
+                        loop {
+                            fields.push(TupleField { label: None, ty: self.parse_type()? });
+                            if !self.eat(&Token::Comma) {
+                                break;
+                            }
+                        }
+                        self.expect(Token::RAngle)?;
+                        return Ok(Type::Tuple(fields));
+                    } else {
+                        self.expect(Token::RAngle)?;
+                        return Ok(first_ty);
+                    }
+                }
+                
+                // Not an identifier/tyvar, so parse as regular tuple
+                let first = self.parse_type()?;
+                if self.eat(&Token::Comma) {
+                    let mut fields = vec![TupleField { label: None, ty: first }];
+                    loop {
+                        fields.push(TupleField { label: None, ty: self.parse_type()? });
+                        if !self.eat(&Token::Comma) {
+                            break;
+                        }
+                    }
+                    self.expect(Token::RAngle)?;
+                    Ok(Type::Tuple(fields))
+                } else {
+                    self.expect(Token::RAngle)?;
                     Ok(first)
                 }
             }

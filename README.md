@@ -16,6 +16,8 @@ REPL shell:
 $ goth
 ```
 
+* change prompt to `𝖌𝖔𝖙𝖍[12]› `
+
 ## Status
 
 `goth` was born on 2026-01-16.  The alpha version of the language and interpreter were completed on 2026-01-17.

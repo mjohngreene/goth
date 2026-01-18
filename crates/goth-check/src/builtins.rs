@@ -63,6 +63,11 @@ pub fn binop_type(op: BinOp, left: &Type, right: &Type) -> TypeResult<Type> {
                 right: right.clone(),
             })
         }
+
+        // Uncertainty: numeric × numeric → numeric
+        BinOp::PlusMinus => {
+            numeric_binop(op, left, right)
+        }
     }
 }
 
@@ -308,6 +313,21 @@ pub fn unaryop_type(op: UnaryOp, operand: &Type) -> TypeResult<Type> {
                 }
                 _ => Err(TypeError::InvalidUnaryOp {
                     op: "scan".to_string(),
+                    operand: operand.clone(),
+                })
+            }
+        }
+
+        // Sqrt, Floor, Ceil: T → T (where T is numeric)
+        UnaryOp::Sqrt | UnaryOp::Floor | UnaryOp::Ceil => {
+            match operand {
+                Type::Prim(p) if p.is_numeric() => Ok(Type::Prim(PrimType::F64)),
+                Type::Tensor(sh, el) => {
+                    let inner = unaryop_type(op, el)?;
+                    Ok(Type::Tensor(sh.clone(), Box::new(inner)))
+                }
+                _ => Err(TypeError::InvalidUnaryOp {
+                    op: format!("{:?}", op),
                     operand: operand.clone(),
                 })
             }

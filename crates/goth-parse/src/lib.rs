@@ -527,4 +527,359 @@ mod tests {
     fn test_parse_error_unclosed_bracket() {
         assert!(parse_expr("[1, 2, 3").is_err());
     }
+
+    // ============ Bug Fix Tests ============
+    // Tests for syntax corrections and refinements from session
+
+    #[test]
+    fn test_greek_letter_in_pattern() {
+        // Greek letters should work in let patterns
+        let expr = parse_expr("let μ = 5 in μ").unwrap();
+        match expr {
+            Expr::Let { pattern, .. } => {
+                match pattern {
+                    Pattern::Var(Some(name)) => assert_eq!(&*name, "μ"),
+                    _ => panic!("Expected var pattern with μ"),
+                }
+            }
+            _ => panic!("Expected let expression"),
+        }
+    }
+
+    #[test]
+    fn test_greek_letter_in_expression() {
+        // Greek letters should work as variable references
+        let expr = parse_expr("μ + 1").unwrap();
+        match expr {
+            Expr::BinOp(BinOp::Add, left, _) => {
+                match *left {
+                    Expr::Name(name) => assert_eq!(&*name, "μ"),
+                    _ => panic!("Expected μ as name"),
+                }
+            }
+            _ => panic!("Expected binary operation"),
+        }
+    }
+
+    #[test]
+    fn test_greek_letter_field_access() {
+        // Greek letters should work in field access
+        let expr = parse_expr("stats.μ").unwrap();
+        match expr {
+            Expr::Field(_, field) => {
+                match field {
+                    goth_ast::expr::FieldAccess::Named(name) => assert_eq!(&*name, "μ"),
+                    _ => panic!("Expected named field μ"),
+                }
+            }
+            _ => panic!("Expected field access"),
+        }
+    }
+
+    #[test]
+    fn test_back_arrow_let_binding() {
+        // ← should work as alternative to =
+        let expr1 = parse_expr("let x ← 5 in x").unwrap();
+        let expr2 = parse_expr("let x = 5 in x").unwrap();
+        // Both should parse to the same structure
+        match (expr1, expr2) {
+            (Expr::Let { .. }, Expr::Let { .. }) => {
+                // Success - both are let expressions
+            }
+            _ => panic!("Both should be let expressions"),
+        }
+    }
+
+    #[test]
+    fn test_back_arrow_let_rec() {
+        // ← should work in let rec
+        let expr = parse_expr("let rec f ← λ→ ₀ in f").unwrap();
+        match expr {
+            Expr::LetRec { bindings, .. } => {
+                assert_eq!(bindings.len(), 1);
+            }
+            _ => panic!("Expected let rec"),
+        }
+    }
+
+    #[test]
+    fn test_sequential_let_bindings() {
+        // Semicolons should allow sequential bindings
+        let expr = parse_expr("let x ← 1 ; y ← 2 in x + y").unwrap();
+        // This should parse as nested lets
+        match expr {
+            Expr::Let { body, .. } => {
+                match *body {
+                    Expr::Let { .. } => {
+                        // Success - nested let structure
+                    }
+                    _ => panic!("Expected nested let"),
+                }
+            }
+            _ => panic!("Expected outer let"),
+        }
+    }
+
+    #[test]
+    fn test_sequential_let_three_bindings() {
+        // Multiple sequential bindings
+        let expr = parse_expr("let x ← 1 ; y ← 2 ; z ← 3 in x + y + z").unwrap();
+        // Should parse successfully
+        match expr {
+            Expr::Let { .. } => {
+                // Success
+            }
+            _ => panic!("Expected let expression"),
+        }
+    }
+
+    #[test]
+    fn test_sequential_let_trailing_semicolon() {
+        // Trailing semicolon should be optional
+        let expr = parse_expr("let x ← 1 ; y ← 2 ; in x + y").unwrap();
+        match expr {
+            Expr::Let { .. } => {
+                // Success
+            }
+            _ => panic!("Expected let expression"),
+        }
+    }
+
+    #[test]
+    fn test_expr_application_then_operator() {
+        // Critical bug fix: function application followed by operator
+        // This was failing with "expected In, got Slash"
+        let expr = parse_expr("sum ₀ / len ₀").unwrap();
+        match expr {
+            Expr::BinOp(BinOp::Div, left, right) => {
+                // Left should be application: sum ₀
+                match *left {
+                    Expr::App(_, _) => {
+                        // Success
+                    }
+                    _ => panic!("Expected application on left"),
+                }
+                // Right should be application: len ₀
+                match *right {
+                    Expr::App(_, _) => {
+                        // Success
+                    }
+                    _ => panic!("Expected application on right"),
+                }
+            }
+            _ => panic!("Expected division"),
+        }
+    }
+
+    #[test]
+    fn test_complex_expr_with_application_and_ops() {
+        // sum arr / n should parse as (sum arr) / n
+        let expr = parse_expr("sum arr / n").unwrap();
+        match expr {
+            Expr::BinOp(BinOp::Div, _, _) => {
+                // Success - parsed as division
+            }
+            _ => panic!("Expected division operation"),
+        }
+    }
+
+    #[test]
+    fn test_expr_multiple_applications_and_ops() {
+        // f x + g y should parse as (f x) + (g y)
+        let expr = parse_expr("f x + g y").unwrap();
+        match expr {
+            Expr::BinOp(BinOp::Add, left, right) => {
+                match (*left, *right) {
+                    (Expr::App(_, _), Expr::App(_, _)) => {
+                        // Success - both sides are applications
+                    }
+                    _ => panic!("Expected applications on both sides"),
+                }
+            }
+            _ => panic!("Expected addition"),
+        }
+    }
+
+    #[test]
+    fn test_normalize_function_body() {
+        // The actual normalize function that was failing
+        let body = "let arr ← ₀ ; n ← len arr ; μ ← sum arr / n in μ";
+        let expr = parse_expr(body).unwrap();
+        match expr {
+            Expr::Let { .. } => {
+                // Success - complex function body parsed
+            }
+            _ => panic!("Expected let expression"),
+        }
+    }
+
+    #[test]
+    fn test_greek_sequential_bindings() {
+        // Combining Greek letters and sequential bindings
+        let expr = parse_expr("let μ ← 5 ; σ ← 2 in μ + σ").unwrap();
+        match expr {
+            Expr::Let { pattern, body, .. } => {
+                match pattern {
+                    Pattern::Var(Some(name)) => assert_eq!(&*name, "μ"),
+                    _ => panic!("Expected μ pattern"),
+                }
+                match *body {
+                    Expr::Let { .. } => {
+                        // Success - nested let
+                    }
+                    _ => panic!("Expected nested let"),
+                }
+            }
+            _ => panic!("Expected let"),
+        }
+    }
+
+    #[test]
+    fn test_function_decl_with_greek() {
+        // Function declarations should accept Greek letters
+        let source = "╭─ test : F → F\n╰─ let μ ← ₀ in μ";
+        let module = parse_module(source, "test").unwrap();
+        assert_eq!(module.decls.len(), 1);
+    }
+
+    // ============ Multi-Argument Function Tests ============
+
+    #[test]
+    fn test_multi_arg_function_type_parsing() {
+        // Two-argument function type
+        let ty = parse_type("F → F → F").unwrap();
+        match ty {
+            goth_ast::types::Type::Fn(_arg1, ret1) => {
+                match *ret1 {
+                    goth_ast::types::Type::Fn(_arg2, _ret2) => {
+                        // Success - nested function type
+                    }
+                    _ => panic!("Expected nested function type"),
+                }
+            }
+            _ => panic!("Expected function type"),
+        }
+    }
+
+    #[test]
+    fn test_three_arg_function_type_parsing() {
+        // Three-argument function type
+        let ty = parse_type("F → F → F → F").unwrap();
+        match ty {
+            goth_ast::types::Type::Fn(_arg1, ret1) => {
+                match *ret1 {
+                    goth_ast::types::Type::Fn(_arg2, ret2) => {
+                        match *ret2 {
+                            goth_ast::types::Type::Fn(_arg3, _ret3) => {
+                                // Success - triple nested function type
+                            }
+                            _ => panic!("Expected third function type"),
+                        }
+                    }
+                    _ => panic!("Expected second function type"),
+                }
+            }
+            _ => panic!("Expected function type"),
+        }
+    }
+
+    #[test]
+    fn test_multi_arg_function_declaration() {
+        // Two-argument function declaration with body using both args
+        let source = "╭─ pythag : F → F → F\n╰─ √(₀ × ₀ + ₁ × ₁)";
+        let module = parse_module(source, "test").unwrap();
+        assert_eq!(module.decls.len(), 1);
+        
+        match &module.decls[0] {
+            goth_ast::decl::Decl::Fn(fn_decl) => {
+                assert_eq!(&*fn_decl.name, "pythag");
+                // Verify type signature parsed correctly
+                match &fn_decl.signature {
+                    goth_ast::types::Type::Fn(_arg1, ret) => {
+                        match ret.as_ref() {
+                            goth_ast::types::Type::Fn(_arg2, _ret) => {
+                                // Success - two arrows
+                            }
+                            _ => panic!("Expected second arrow"),
+                        }
+                    }
+                    _ => panic!("Expected function type"),
+                }
+            }
+            _ => panic!("Expected function declaration"),
+        }
+    }
+
+    #[test]
+    fn test_three_arg_function_declaration() {
+        // Three-argument function
+        let source = "╭─ add3 : F → F → F → F\n╰─ ₀ + ₁ + ₂";
+        let module = parse_module(source, "test").unwrap();
+        assert_eq!(module.decls.len(), 1);
+    }
+
+    #[test]
+    fn test_tuple_arg_function_type() {
+        // Single tuple argument (not curried)
+        let ty = parse_type("⟨F, F⟩ → F").unwrap();
+        match ty {
+            goth_ast::types::Type::Fn(arg, _ret) => {
+                match *arg {
+                    goth_ast::types::Type::Tuple(fields) => {
+                        assert_eq!(fields.len(), 2);
+                    }
+                    _ => panic!("Expected tuple type"),
+                }
+            }
+            _ => panic!("Expected function type"),
+        }
+    }
+
+    #[test]
+    fn test_tuple_arg_function_declaration() {
+        // Function with tuple parameter
+        let source = "╭─ pythag : ⟨F, F⟩ → F\n╰─ √(₀.0 × ₀.0 + ₀.1 × ₀.1)";
+        let module = parse_module(source, "test").unwrap();
+        assert_eq!(module.decls.len(), 1);
+    }
+
+    #[test]
+    fn test_mixed_tuple_and_curried() {
+        // Mix of tuple and curried: ⟨F, F⟩ → F → F
+        let ty = parse_type("⟨F, F⟩ → F → F").unwrap();
+        match ty {
+            goth_ast::types::Type::Fn(arg, ret) => {
+                match *arg {
+                    goth_ast::types::Type::Tuple(_) => {
+                        // First arg is tuple
+                    }
+                    _ => panic!("Expected tuple arg"),
+                }
+                match *ret {
+                    goth_ast::types::Type::Fn(_arg2, _ret2) => {
+                        // Second arrow present
+                    }
+                    _ => panic!("Expected second arrow"),
+                }
+            }
+            _ => panic!("Expected function type"),
+        }
+    }
+
+    #[test]
+    fn test_multi_arg_with_operators() {
+        // Test that new operators work in multi-arg functions
+        let source = "╭─ test : F → F → F\n╰─ √₀ + ⌊₁⌋";
+        let module = parse_module(source, "test").unwrap();
+        assert_eq!(module.decls.len(), 1);
+    }
+
+    #[test]
+    fn test_uncertain_in_function_type() {
+        // Function returning uncertain value
+        let source = "╭─ measure : F → F → (F ± F)\n╰─ ₀ ± ₁";
+        let module = parse_module(source, "test").unwrap();
+        assert_eq!(module.decls.len(), 1);
+    }
 }
+

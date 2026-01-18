@@ -91,4 +91,200 @@ mod tests {
     #[test] fn test_de_bruijn_nested() { assert_eq!(eval(&Expr::app(Expr::app(Expr::lam(Expr::lam(Expr::add(Expr::idx(0), Expr::idx(1)))), Expr::int(3)), Expr::int(4))).unwrap(), Value::Int(7)); }
     #[test] fn test_de_bruijn_capture_in_closure() { let expr = Expr::let_(Pattern::var("x"), Expr::int(5), Expr::let_(Pattern::var("f"), Expr::lam(Expr::add(Expr::idx(1), Expr::idx(0))), Expr::app(Expr::idx(0), Expr::int(3)))); assert_eq!(eval(&expr).unwrap(), Value::Int(8)); }
     #[test] fn test_dot_product() { let mut e = Evaluator::new(); let a = Expr::array(vec![Expr::float(1.0), Expr::float(2.0), Expr::float(3.0)]); let b = Expr::array(vec![Expr::float(4.0), Expr::float(5.0), Expr::float(6.0)]); let expr = Expr::app(Expr::app(Expr::name("dot"), a), b); assert_eq!(e.eval(&expr).unwrap(), Value::float(32.0)); }
+
+    // ============ Multi-Argument Function Tests ============
+
+    #[test]
+    fn test_two_arg_closure() {
+        // Test that a closure with arity=2 works correctly
+        let body = Expr::add(Expr::idx(1), Expr::idx(0));  // ₀ + ₁
+        let closure = Value::closure(2, body, Env::new());
+        
+        let mut e = Evaluator::new();
+        e.define("add_two", closure);
+        
+        // Apply both arguments
+        let expr = Expr::app(Expr::app(Expr::name("add_two"), Expr::int(3)), Expr::int(4));
+        assert_eq!(e.eval(&expr).unwrap(), Value::Int(7));
+    }
+
+    #[test]
+    fn test_two_arg_partial_application() {
+        // Test partial application of a two-argument closure
+        let body = Expr::mul(Expr::idx(1), Expr::idx(0));  // ₀ × ₁
+        let closure = Value::closure(2, body, Env::new());
+        
+        let mut e = Evaluator::new();
+        e.define("mul_two", closure);
+        
+        // Apply first argument only
+        let expr = Expr::app(Expr::name("mul_two"), Expr::int(5));
+        let partial = e.eval(&expr).unwrap();
+        assert!(partial.is_callable());
+        
+        // Apply second argument
+        let expr2 = Expr::app(Expr::name("mul_two_5"), Expr::int(6));
+        e.define("mul_two_5", partial);
+        assert_eq!(e.eval(&expr2).unwrap(), Value::Int(30));
+    }
+
+    #[test]
+    fn test_three_arg_closure() {
+        // Test closure with arity=3
+        let body = Expr::add(Expr::add(Expr::idx(2), Expr::idx(1)), Expr::idx(0));  // ₀ + ₁ + ₂
+        let closure = Value::closure(3, body, Env::new());
+        
+        let mut e = Evaluator::new();
+        e.define("add_three", closure);
+        
+        // Apply all three arguments
+        let expr = Expr::app(
+            Expr::app(
+                Expr::app(Expr::name("add_three"), Expr::int(1)),
+                Expr::int(2)
+            ),
+            Expr::int(3)
+        );
+        assert_eq!(e.eval(&expr).unwrap(), Value::Int(6));
+    }
+
+    #[test]
+    fn test_pythag_two_arg() {
+        // Test Pythagorean theorem as two-argument function
+        // √(₀² + ₁²)
+        let body = Expr::UnaryOp(
+            UnaryOp::Sqrt,
+            Box::new(Expr::add(
+                Expr::mul(Expr::idx(1), Expr::idx(1)),
+                Expr::mul(Expr::idx(0), Expr::idx(0))
+            ))
+        );
+        let closure = Value::closure(2, body, Env::new());
+        
+        let mut e = Evaluator::new();
+        e.define("pythag", closure);
+        
+        let expr = Expr::app(
+            Expr::app(Expr::name("pythag"), Expr::float(3.0)),
+            Expr::float(4.0)
+        );
+        assert_eq!(e.eval(&expr).unwrap(), Value::float(5.0));
+    }
+
+    #[test]
+    fn test_multi_arg_with_new_operators() {
+        // Test multi-arg function using new Unicode operators
+        // ⌊₁⌋ + ⌈₀⌉ (first arg floored + second arg ceiled)
+        let body = Expr::add(
+            Expr::UnaryOp(UnaryOp::Floor, Box::new(Expr::idx(1))),
+            Expr::UnaryOp(UnaryOp::Ceil, Box::new(Expr::idx(0)))
+        );
+        let closure = Value::closure(2, body, Env::new());
+        
+        let mut e = Evaluator::new();
+        e.define("floor_ceil_add", closure);
+        
+        let expr = Expr::app(
+            Expr::app(Expr::name("floor_ceil_add"), Expr::float(3.7)),
+            Expr::float(2.2)
+        );
+        // floor and ceil return Int, not Float
+        // ⌊3.7⌋ + ⌈2.2⌉ = Int(3) + Int(3) = Int(6)
+        assert_eq!(e.eval(&expr).unwrap(), Value::Int(6));
+    }
+
+    #[test]
+    fn test_uncertain_value_creation() {
+        // Test creating uncertain values with ±
+        let expr = Expr::binop(BinOp::PlusMinus, Expr::float(10.5), Expr::float(0.3));
+        let result = eval(&expr).unwrap();
+        
+        match result {
+            Value::Uncertain { value, uncertainty } => {
+                assert_eq!(*value, Value::float(10.5));
+                assert_eq!(*uncertainty, Value::float(0.3));
+            }
+            _ => panic!("Expected uncertain value"),
+        }
+    }
+
+    #[test]
+    fn test_multi_arg_uncertain_function() {
+        // Function that creates uncertain value from two args
+        // With arity 2: ₀ refers to first arg, ₁ refers to second arg
+        // So ₀ ± ₁ means first_arg ± second_arg
+        let body = Expr::binop(BinOp::PlusMinus, Expr::idx(0), Expr::idx(1));
+        let closure = Value::closure(2, body, Env::new());
+        
+        let mut e = Evaluator::new();
+        e.define("make_uncertain", closure);
+        
+        let expr = Expr::app(
+            Expr::app(Expr::name("make_uncertain"), Expr::float(5.0)),
+            Expr::float(0.5)
+        );
+        
+        let result = e.eval(&expr).unwrap();
+        
+        // Match and extract values
+        match result {
+            Value::Uncertain { ref value, ref uncertainty } => {
+                // Check using pattern matching
+                match (value.as_ref(), uncertainty.as_ref()) {
+                    (Value::Float(v), Value::Float(u)) => {
+                        assert_eq!(v.0, 5.0);
+                        assert_eq!(u.0, 0.5);
+                    }
+                    _ => panic!("Expected Float values, got {:?} ± {:?}", value, uncertainty),
+                }
+            }
+            other => panic!("Expected uncertain value, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_curried_with_sqrt() {
+        // Test curried function with √ operator
+        // λ→ λ→ √(₀ × ₁)
+        let body = Expr::UnaryOp(
+            UnaryOp::Sqrt,
+            Box::new(Expr::mul(Expr::idx(1), Expr::idx(0)))
+        );
+        let closure = Value::closure(2, body, Env::new());
+        
+        let mut e = Evaluator::new();
+        e.define("sqrt_product", closure);
+        
+        let expr = Expr::app(
+            Expr::app(Expr::name("sqrt_product"), Expr::float(4.0)),
+            Expr::float(9.0)
+        );
+        assert_eq!(e.eval(&expr).unwrap(), Value::float(6.0)); // √(4 × 9) = √36 = 6
+    }
+
+    #[test]
+    fn test_four_arg_function() {
+        // Test with four arguments
+        // ₀ + ₁ + ₂ + ₃
+        let body = Expr::add(
+            Expr::add(Expr::idx(3), Expr::idx(2)),
+            Expr::add(Expr::idx(1), Expr::idx(0))
+        );
+        let closure = Value::closure(4, body, Env::new());
+        
+        let mut e = Evaluator::new();
+        e.define("add_four", closure);
+        
+        let expr = Expr::app(
+            Expr::app(
+                Expr::app(
+                    Expr::app(Expr::name("add_four"), Expr::int(1)),
+                    Expr::int(2)
+                ),
+                Expr::int(3)
+            ),
+            Expr::int(4)
+        );
+        assert_eq!(e.eval(&expr).unwrap(), Value::Int(10));
+    }
 }
