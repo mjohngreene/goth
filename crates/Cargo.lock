@@ -278,6 +278,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "goth-mir"
+version = "0.1.0"
+dependencies = [
+ "goth-ast",
+ "goth-check",
+ "goth-parse",
+ "thiserror",
+]
+
+[[package]]
 name = "goth-parse"
 version = "0.1.0"
 dependencies = [

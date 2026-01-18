@@ -6,6 +6,7 @@ members = [
     "goth-parse",
     "goth-cli",
     "goth-check",
+    "goth-mir",
 ]
 
 [workspace.package]

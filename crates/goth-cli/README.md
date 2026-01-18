@@ -28,6 +28,11 @@ goth -a -e "[1,2,3] ↦ λ→ ₀ * 2"
 
 # Enable trace output
 goth -t -e "let x = 5 in x * x"
+
+# Check expression
+goth -c -e "let x = 5 in x * x"
+Type: I64
+25
 ```
 
 ## REPL

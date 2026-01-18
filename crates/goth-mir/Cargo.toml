@@ -1,0 +1,16 @@
+[package]
+name = "goth-mir"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+goth-ast = { path = "../goth-ast" }
+goth-check = { path = "../goth-check" }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+goth-parse = { path = "../goth-parse" }
