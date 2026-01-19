@@ -715,6 +715,93 @@ fn emit_stmt(ctx: &mut LlvmContext, stmt: &Stmt, output: &mut String) -> Result<
             (ssa, code)
         }
 
+        Rhs::MakeVariant { tag, constructor: _, payload } => {
+            // Variant representation: { i32 tag, i64 payload }
+            // Allocate 16 bytes (8 for tag padded, 8 for payload)
+            let alloc_ssa = ctx.fresh_ssa();
+            output.push_str(&format!(
+                "  {} = call i8* @malloc(i64 16)\n",
+                alloc_ssa
+            ));
+
+            // Cast to i64* to store tag
+            let tag_ptr = ctx.fresh_ssa();
+            output.push_str(&format!(
+                "  {} = bitcast i8* {} to i64*\n",
+                tag_ptr, alloc_ssa
+            ));
+
+            // Store tag
+            output.push_str(&format!(
+                "  store i64 {}, i64* {}\n",
+                tag, tag_ptr
+            ));
+
+            // Store payload if present
+            if let Some(p) = payload {
+                let payload_ty = Type::Prim(PrimType::I64);
+                let payload_val = emit_operand(ctx, p, &payload_ty, output)?;
+
+                let payload_ptr = ctx.fresh_ssa();
+                output.push_str(&format!(
+                    "  {} = getelementptr i64, i64* {}, i64 1\n",
+                    payload_ptr, tag_ptr
+                ));
+                output.push_str(&format!(
+                    "  store i64 {}, i64* {}\n",
+                    payload_val, payload_ptr
+                ));
+            }
+
+            (alloc_ssa, String::new())
+        }
+
+        Rhs::GetTag(variant) => {
+            let ssa = ctx.fresh_ssa();
+            let variant_ty = Type::Prim(PrimType::I64); // Pointer type
+            let variant_val = emit_operand(ctx, variant, &variant_ty, output)?;
+
+            // Cast to i64* and load tag
+            let tag_ptr = ctx.fresh_ssa();
+            output.push_str(&format!(
+                "  {} = bitcast i8* {} to i64*\n",
+                tag_ptr, variant_val
+            ));
+
+            let code = format!(
+                "  {} = load i64, i64* {}\n",
+                ssa, tag_ptr
+            );
+
+            (ssa, code)
+        }
+
+        Rhs::GetPayload(variant) => {
+            let ssa = ctx.fresh_ssa();
+            let variant_ty = Type::Prim(PrimType::I64); // Pointer type
+            let variant_val = emit_operand(ctx, variant, &variant_ty, output)?;
+
+            // Cast to i64* and get payload (offset 1)
+            let base_ptr = ctx.fresh_ssa();
+            output.push_str(&format!(
+                "  {} = bitcast i8* {} to i64*\n",
+                base_ptr, variant_val
+            ));
+
+            let payload_ptr = ctx.fresh_ssa();
+            output.push_str(&format!(
+                "  {} = getelementptr i64, i64* {}, i64 1\n",
+                payload_ptr, base_ptr
+            ));
+
+            let code = format!(
+                "  {} = load i64, i64* {}\n",
+                ssa, payload_ptr
+            );
+
+            (ssa, code)
+        }
+
         _ => {
             return Err(LlvmError::UnsupportedOp(format!(
                 "Statement: {:?}",

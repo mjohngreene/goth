@@ -155,6 +155,22 @@ pub enum Rhs {
 
     /// Range: generate sequence [start, start+1, ..., end-1]
     Range(Operand, Operand),
+
+    /// Create a variant (tagged union): MakeVariant { tag: 0, constructor: "Some", payload: Some(value) }
+    MakeVariant {
+        /// Tag index (assigned by enum definition order)
+        tag: u32,
+        /// Constructor name (for debugging/display)
+        constructor: String,
+        /// Optional payload value
+        payload: Option<Operand>,
+    },
+
+    /// Get the tag of a variant value (returns integer)
+    GetTag(Operand),
+
+    /// Get the payload of a variant value (assumes tag is already checked)
+    GetPayload(Operand),
 }
 
 /// Reduction operations

@@ -155,6 +155,15 @@ impl fmt::Display for Rhs {
             }
             Rhs::Iota(n) => write!(f, "Iota({})", n),
             Rhs::Range(start, end) => write!(f, "Range({}, {})", start, end),
+            Rhs::MakeVariant { tag, constructor, payload } => {
+                write!(f, "MakeVariant({}, \"{}\"", tag, constructor)?;
+                if let Some(p) = payload {
+                    write!(f, ", {}", p)?;
+                }
+                write!(f, ")")
+            }
+            Rhs::GetTag(op) => write!(f, "GetTag({})", op),
+            Rhs::GetPayload(op) => write!(f, "GetPayload({})", op),
         }
     }
 }

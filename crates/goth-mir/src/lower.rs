@@ -606,6 +606,45 @@ pub fn lower_expr_to_operand(ctx: &mut LoweringContext, expr: &Expr) -> MirResul
             Ok((Operand::Local(dest), elem_ty))
         }
 
+        // ============ Variants (Sum Types) ============
+
+        Expr::Variant { constructor, payload } => {
+            // Lower the payload if present
+            let (payload_op, payload_ty) = if let Some(p) = payload {
+                let (op, ty) = lower_expr_to_operand(ctx, p)?;
+                (Some(op), Some(ty))
+            } else {
+                (None, None)
+            };
+
+            // Tag index is computed from constructor name hash for now
+            // In a full implementation, this would be looked up from enum definition
+            let tag = constructor_tag(constructor);
+
+            // Build variant type - single arm for now (would need full enum info for complete type)
+            let variant_ty = Type::Variant(vec![
+                goth_ast::types::VariantArm {
+                    name: constructor.clone(),
+                    payload: payload_ty,
+                }
+            ]);
+
+            let dest = ctx.fresh_local();
+            ctx.emit(dest, variant_ty.clone(), Rhs::MakeVariant {
+                tag,
+                constructor: constructor.to_string(),
+                payload: payload_op,
+            });
+
+            Ok((Operand::Local(dest), variant_ty))
+        }
+
+        // ============ Match Expressions ============
+
+        Expr::Match { scrutinee, arms } => {
+            lower_match_expr(ctx, scrutinee, arms)
+        }
+
         // ============ TODO: More expressions ============
 
         _ => Err(MirError::CannotLower(format!("Expression type not yet implemented: {:?}", expr))),
@@ -638,6 +677,159 @@ fn lower_literal(lit: &Literal) -> (Constant, Type) {
             // TODO: Handle other literal types
             (Constant::Unit, Type::Tuple(vec![]))
         }
+    }
+}
+
+/// Compute a tag index from a constructor name
+/// In a full implementation, this would be looked up from enum definitions
+fn constructor_tag(name: &str) -> u32 {
+    // Use simple hash-based assignment for now
+    // Common constructors get predictable tags
+    match name {
+        // Option
+        "None" => 0,
+        "Some" => 1,
+        // Either
+        "Left" => 0,
+        "Right" => 1,
+        // Bool-like
+        "False" => 0,
+        "True" => 1,
+        // List
+        "Nil" => 0,
+        "Cons" => 1,
+        // Result
+        "Ok" => 0,
+        "Err" => 1,
+        // Default: hash the name
+        _ => {
+            let mut hash: u32 = 0;
+            for c in name.chars() {
+                hash = hash.wrapping_mul(31).wrapping_add(c as u32);
+            }
+            hash % 256 // Keep tags small
+        }
+    }
+}
+
+/// Lower a match expression to MIR with control flow
+fn lower_match_expr(
+    ctx: &mut LoweringContext,
+    scrutinee: &Expr,
+    arms: &[goth_ast::expr::MatchArm],
+) -> MirResult<(Operand, Type)> {
+    use goth_ast::pattern::Pattern;
+
+    // Lower the scrutinee
+    let (scrut_op, scrut_ty) = lower_expr_to_operand(ctx, scrutinee)?;
+
+    // Create result variable
+    let result = ctx.fresh_local();
+
+    // Create join block for after the match
+    let join_block_id = ctx.fresh_block();
+
+    // Check if this is a variant match (has Pattern::Variant arms)
+    let is_variant_match = arms.iter().any(|arm| matches!(arm.pattern, Pattern::Variant { .. }));
+
+    if is_variant_match {
+        // Get the tag of the scrutinee
+        let tag_local = ctx.fresh_local();
+        ctx.emit(tag_local, Type::Prim(goth_ast::types::PrimType::I64), Rhs::GetTag(scrut_op.clone()));
+
+        // Build switch cases for each variant arm
+        let mut cases = Vec::new();
+        let mut arm_blocks = Vec::new();
+
+        for arm in arms {
+            let arm_block_id = ctx.fresh_block();
+            arm_blocks.push((arm_block_id, arm));
+
+            if let Pattern::Variant { constructor, payload: _ } = &arm.pattern {
+                let tag = constructor_tag(constructor);
+                cases.push((Constant::Int(tag as i64), arm_block_id));
+            }
+        }
+
+        // Default block (unreachable for exhaustive matches)
+        let default_block_id = ctx.fresh_block();
+
+        // Save current statements and create the switch terminator
+        let current_stmts = ctx.take_stmts();
+        let switch_block = Block {
+            stmts: current_stmts,
+            term: Terminator::Switch {
+                scrutinee: Operand::Local(tag_local),
+                cases,
+                default: default_block_id,
+            },
+        };
+        ctx.pending_entry_block = Some(switch_block);
+
+        // Lower each arm
+        let mut result_ty = None;
+        for (arm_block_id, arm) in arm_blocks {
+            // Extract payload if pattern has one
+            if let Pattern::Variant { constructor: _, payload } = &arm.pattern {
+                if let Some(payload_pattern) = payload {
+                    // Get the payload from the scrutinee
+                    let payload_local = ctx.fresh_local();
+                    let payload_ty = Type::Prim(goth_ast::types::PrimType::I64); // Placeholder type
+                    ctx.emit(payload_local, payload_ty.clone(), Rhs::GetPayload(scrut_op.clone()));
+
+                    // Bind the payload to a local for the arm body
+                    if let Pattern::Var(_) = payload_pattern.as_ref() {
+                        ctx.push_local(payload_local, payload_ty);
+                    }
+                }
+            }
+
+            // Lower the arm body
+            let (arm_op, arm_ty) = lower_expr_to_operand(ctx, &arm.body)?;
+
+            if result_ty.is_none() {
+                result_ty = Some(arm_ty.clone());
+            }
+
+            // Pop any bound locals
+            if let Pattern::Variant { payload: Some(_), .. } = &arm.pattern {
+                ctx.pop_local();
+            }
+
+            // Create arm block
+            let arm_stmts = ctx.take_stmts();
+            let mut block_stmts = arm_stmts;
+            block_stmts.push(Stmt {
+                dest: result,
+                ty: arm_ty,
+                rhs: Rhs::Use(arm_op),
+            });
+            ctx.add_block(arm_block_id, Block {
+                stmts: block_stmts,
+                term: Terminator::Goto(join_block_id),
+            });
+        }
+
+        // Default block (unreachable)
+        ctx.add_block(default_block_id, Block {
+            stmts: vec![],
+            term: Terminator::Unreachable,
+        });
+
+        // Join block
+        ctx.add_block(join_block_id, Block {
+            stmts: vec![],
+            term: Terminator::Unreachable, // Will be replaced by caller
+        });
+
+        let result_ty = result_ty.unwrap_or(Type::Tuple(vec![]));
+        ctx.local_types.insert(result, result_ty.clone());
+
+        Ok((Operand::Local(result), result_ty))
+    } else {
+        // Non-variant match (e.g., literal patterns) - use if-else chain for now
+        // This is a simplified implementation
+        Err(MirError::CannotLower("Non-variant match expressions not yet fully supported".to_string()))
     }
 }
 

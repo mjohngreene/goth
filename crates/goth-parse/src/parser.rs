@@ -1067,6 +1067,7 @@ impl<'a> Parser<'a> {
             Some(Token::FnStart) => Ok(Some(self.parse_fn_decl()?)),
             Some(Token::Let) => Ok(Some(self.parse_let_decl()?)),
             Some(Token::Type) => Ok(Some(self.parse_type_decl()?)),
+            Some(Token::Enum) => Ok(Some(self.parse_enum_decl()?)),
             Some(Token::Use) => Ok(Some(self.parse_use_decl()?)),
             _ => Ok(None),
         }
@@ -1186,6 +1187,75 @@ impl<'a> Parser<'a> {
             params,
             definition: def,
         }))
+    }
+
+    /// Parse enum declaration: enum Name τ where Variant₁ T₁ | Variant₂ T₂ | ...
+    /// Examples:
+    ///   enum Bool where True | False
+    ///   enum Option τ where Some τ | None
+    ///   enum Either α β where Left α | Right β
+    fn parse_enum_decl(&mut self) -> ParseResult<Decl> {
+        use goth_ast::decl::{EnumDecl, EnumVariant};
+
+        self.expect(Token::Enum)?;
+        let name = self.expect_ident()?;
+
+        // Parse optional type parameters (lowercase identifiers or Greek letters)
+        let mut params = Vec::new();
+        while let Some(Token::Ident(p)) | Some(Token::TyVar(p)) | Some(Token::AplIdent(p)) = self.peek().cloned() {
+            // Only accept lowercase type variables
+            if p.chars().next().map(|c| c.is_lowercase() || c == 'τ' || c == 'α' || c == 'β' || c == 'σ').unwrap_or(false) {
+                self.next();
+                params.push(TypeParam { name: p.into(), kind: TypeParamKind::Type });
+            } else {
+                break;
+            }
+        }
+
+        self.expect(Token::Where)?;
+
+        // Parse variants separated by |
+        let mut variants = Vec::new();
+        loop {
+            // Variant name must start with uppercase
+            let variant_name = self.expect_ident()?;
+
+            // Optional payload type (check if next token could start a type)
+            let payload = if self.peek_is_type_start() {
+                Some(self.parse_type()?)
+            } else {
+                None
+            };
+
+            variants.push(EnumVariant {
+                name: variant_name.into(),
+                payload,
+            });
+
+            // Check for more variants
+            if !self.eat(&Token::Pipe) {
+                break;
+            }
+        }
+
+        Ok(Decl::Enum(EnumDecl {
+            name: name.into(),
+            params,
+            variants,
+        }))
+    }
+
+    /// Check if the next token could start a type (for optional payload parsing)
+    fn peek_is_type_start(&mut self) -> bool {
+        match self.peek() {
+            Some(Token::Ident(s)) => {
+                // Type names start with uppercase, type variables with lowercase
+                s.chars().next().map(|c| c.is_uppercase() || c.is_lowercase()).unwrap_or(false)
+            }
+            Some(Token::TyVar(_)) | Some(Token::AplIdent(_)) => true,
+            Some(Token::LParen) | Some(Token::LBracket) | Some(Token::LAngle) => true,
+            _ => false,
+        }
     }
 }
 

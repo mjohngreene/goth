@@ -85,6 +85,7 @@ impl Pretty {
         match decl {
             Decl::Fn(f) => self.print_fn(f),
             Decl::Type(t) => self.print_type_decl(t),
+            Decl::Enum(e) => self.print_enum_decl(e),
             Decl::Class(c) => self.print_class(c),
             Decl::Impl(i) => self.print_impl(i),
             Decl::Let(l) => self.print_let_decl(l),
@@ -96,6 +97,28 @@ impl Pretty {
                 self.newline();
             }
         }
+    }
+
+    /// Pretty print an enum declaration
+    pub fn print_enum_decl(&mut self, e: &crate::decl::EnumDecl) {
+        self.write("enum ");
+        self.write(&e.name);
+        for param in &e.params {
+            self.write(" ");
+            self.write(&param.name);
+        }
+        self.write(" where ");
+        for (i, variant) in e.variants.iter().enumerate() {
+            if i > 0 {
+                self.write(" | ");
+            }
+            self.write(&variant.name);
+            if let Some(payload) = &variant.payload {
+                self.write(" ");
+                self.print_type(payload);
+            }
+        }
+        self.newline();
     }
 
     /// Pretty print a function declaration

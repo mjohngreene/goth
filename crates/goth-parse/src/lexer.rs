@@ -77,6 +77,8 @@ pub enum Token {
     Rec,
     #[token("type")]
     Type,
+    #[token("enum")]
+    Enum,
     #[token("fn")]
     Fn,
     #[token("use")]
