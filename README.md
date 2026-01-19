@@ -89,6 +89,11 @@ cargo run --package goth-mlir --example end-to-end-example
 * [Reference](./docs/GOTH-LANGUAGE-REFERENCE-v0.1.md)
 * [Philosophy](./docs/PHILOSOPHY.md)
 
+Among its unusual features, for `goth` the AST is the primary
+representation of the program.  There is a one-to-one mapping
+between source code and AST nodes (barring whitespace).  This
+is more efficient for the LLM to generate and edit.
+
 Here's the target compilation pipeline:
 
 ```
