@@ -37,7 +37,8 @@ impl Evaluator {
             ("and", PrimFn::And), ("or", PrimFn::Or), ("not", PrimFn::Not),
             ("sum", PrimFn::Sum), ("prod", PrimFn::Prod), ("len", PrimFn::Len), ("shape", PrimFn::Shape), ("reverse", PrimFn::Reverse), ("concat", PrimFn::Concat),
             ("dot", PrimFn::Dot), ("norm", PrimFn::Norm), ("matmul", PrimFn::MatMul), ("transpose", PrimFn::Transpose),
-            ("print", PrimFn::Print), ("toInt", PrimFn::ToInt), ("toFloat", PrimFn::ToFloat), ("toBool", PrimFn::ToBool), ("toChar", PrimFn::ToChar),
+            ("print", PrimFn::Print), ("read_line", PrimFn::ReadLine),
+            ("toInt", PrimFn::ToInt), ("toFloat", PrimFn::ToFloat), ("toBool", PrimFn::ToBool), ("toChar", PrimFn::ToChar),
         ];
         for (name, prim) in prims { self.globals.borrow_mut().insert(name.to_string(), Value::Primitive(*prim)); }
     }
@@ -354,7 +355,7 @@ impl Default for Evaluator { fn default() -> Self { Self::new() } }
 fn prim_arity(prim: PrimFn) -> usize {
     match prim {
         PrimFn::Neg | PrimFn::Abs | PrimFn::Not | PrimFn::Exp | PrimFn::Ln | PrimFn::Sqrt | PrimFn::Sin | PrimFn::Cos | PrimFn::Tan | PrimFn::Floor | PrimFn::Ceil | PrimFn::Round | PrimFn::Sum | PrimFn::Prod | PrimFn::Len | PrimFn::Shape | PrimFn::Reverse | PrimFn::Transpose | PrimFn::Norm | PrimFn::ToInt | PrimFn::ToFloat | PrimFn::ToBool | PrimFn::ToChar => 1,
-        PrimFn::Print => 1,
+        PrimFn::Print | PrimFn::ReadLine => 1,  // ReadLine takes unit, returns string
         _ => 2,
     }
 }

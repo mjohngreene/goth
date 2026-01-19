@@ -59,6 +59,19 @@ pub fn apply_prim(prim: PrimFn, args: Vec<Value>) -> EvalResult<Value> {
         PrimFn::ToInt => unary_args(&args, to_int), PrimFn::ToFloat => unary_args(&args, to_float),
         PrimFn::ToBool => unary_args(&args, to_bool), PrimFn::ToChar => unary_args(&args, to_char),
         PrimFn::Print => { for arg in &args { println!("{}", arg); } Ok(Value::Unit) }
+        PrimFn::ReadLine => {
+            use std::io::{self, BufRead};
+            let mut line = String::new();
+            io::stdin().lock().read_line(&mut line).map_err(|e| EvalError::IoError(e.to_string()))?;
+            // Remove trailing newline
+            if line.ends_with('\n') {
+                line.pop();
+                if line.ends_with('\r') {
+                    line.pop();
+                }
+            }
+            Ok(Value::string(&line))
+        }
         _ => Err(EvalError::not_implemented(format!("primitive: {:?}", prim))),
     }
 }
