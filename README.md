@@ -101,17 +101,17 @@ Here's the target compilation pipeline:
 └────┬────┘  └────┬────┘  └────┬────┘                      
      │            │            │                           
      └────────────┼────────────┘                           
-                   ↓                                        
+                  ↓                                        
            ┌──────────────┐                                
            │   GOTH AST   │  ← Canonical in-memory repr    
            │    (DAG)     │                                
            └──────┬───────┘                                
-                   ↓                                        
+                  ↓                                        
            ┌──────────────┐    ┌───────┐                   
            │  Typecheck   │←──→│  Z3   │  ← SMT for        
            │  + Constrain │    └───────┘    intervals,     
            └──────┬───────┘                 shapes,        
-               ↓                         refinements    
+                  ↓                         refinements    
            ┌──────────────┐                                
            │  Typed AST   │  ← All types resolved          
            └──────┬───────┘                                
@@ -120,11 +120,11 @@ Here's the target compilation pipeline:
            │  Monomorph   │  ← Specialize generics         
            │  + Closure   │    Convert closures            
            └──────┬───────┘                                
-                 ↓                                        
+                  ↓                                        
            ┌──────────────┐                                
            │   GOTH MIR   │  ← Low-level, explicit         
            └──────┬───────┘                                
-                   ↓                                        
+                  ↓                                        
            ┌──────────────┐                                
            │     MLIR     │  ← tensor, affine, scf         
            └──────┬───────┘                                
