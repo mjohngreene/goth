@@ -74,6 +74,12 @@ pub fn apply_prim(prim: PrimFn, args: Vec<Value>) -> EvalResult<Value> {
         }
         PrimFn::Iota => unary_args(&args, iota),
         PrimFn::Range => binary_args(&args, range),
+        PrimFn::ToString => unary_args(&args, to_string),
+        PrimFn::Chars => unary_args(&args, chars),
+        PrimFn::StrConcat => binary_args(&args, str_concat),
+        PrimFn::Take => binary_args(&args, take),
+        PrimFn::Drop => binary_args(&args, drop_fn),
+        PrimFn::Index => binary_args(&args, index),
         _ => Err(EvalError::not_implemented(format!("primitive: {:?}", prim))),
     }
 }
@@ -371,6 +377,118 @@ fn range(start: Value, end: Value) -> EvalResult<Value> {
             "range requires two integers, got {} and {}",
             start.type_name(),
             end.type_name()
+        ))),
+    }
+}
+
+/// toString: Convert any value to a string representation
+fn to_string(value: Value) -> EvalResult<Value> {
+    Ok(Value::string(&format!("{}", value)))
+}
+
+/// chars: Convert a string (char tensor) to an array of individual characters
+fn chars(value: Value) -> EvalResult<Value> {
+    match value {
+        Value::Tensor(t) => {
+            if let Some(s) = t.to_string_value() {
+                // Already a string, return as-is (it's already a char tensor)
+                Ok(Value::Tensor(t))
+            } else {
+                Err(EvalError::type_error("String", &Value::Tensor(t)))
+            }
+        }
+        _ => Err(EvalError::type_error("String", &value)),
+    }
+}
+
+/// strConcat: Concatenate two strings
+fn str_concat(left: Value, right: Value) -> EvalResult<Value> {
+    match (&left, &right) {
+        (Value::Tensor(a), Value::Tensor(b)) => {
+            match (a.to_string_value(), b.to_string_value()) {
+                (Some(s1), Some(s2)) => {
+                    let combined = format!("{}{}", s1, s2);
+                    Ok(Value::string(&combined))
+                }
+                _ => {
+                    // Fall back to tensor concat if not strings
+                    concat(left, right)
+                }
+            }
+        }
+        _ => Err(EvalError::type_error_msg(format!(
+            "strConcat requires two strings, got {} and {}",
+            left.type_name(),
+            right.type_name()
+        ))),
+    }
+}
+
+/// take n arr: Take the first n elements from an array
+fn take(n: Value, arr: Value) -> EvalResult<Value> {
+    match (&n, &arr) {
+        (Value::Int(count), Value::Tensor(t)) => {
+            if t.rank() != 1 {
+                return Err(EvalError::not_implemented("take for rank > 1"));
+            }
+            let count = (*count).max(0) as usize;
+            let count = count.min(t.len());
+            let data: Vec<Value> = (0..count).map(|i| t.get_flat(i).unwrap()).collect();
+            Ok(Value::Tensor(Tensor::from_values(vec![data.len()], data)))
+        }
+        (Value::Int(count), Value::Tuple(vs)) => {
+            let count = (*count).max(0) as usize;
+            let count = count.min(vs.len());
+            Ok(Value::Tuple(vs[..count].to_vec()))
+        }
+        _ => Err(EvalError::type_error_msg(format!(
+            "take requires (Int, Tensor/Tuple), got ({}, {})",
+            n.type_name(),
+            arr.type_name()
+        ))),
+    }
+}
+
+/// drop n arr: Drop the first n elements from an array
+fn drop_fn(n: Value, arr: Value) -> EvalResult<Value> {
+    match (&n, &arr) {
+        (Value::Int(count), Value::Tensor(t)) => {
+            if t.rank() != 1 {
+                return Err(EvalError::not_implemented("drop for rank > 1"));
+            }
+            let count = (*count).max(0) as usize;
+            let count = count.min(t.len());
+            let data: Vec<Value> = (count..t.len()).map(|i| t.get_flat(i).unwrap()).collect();
+            Ok(Value::Tensor(Tensor::from_values(vec![data.len()], data)))
+        }
+        (Value::Int(count), Value::Tuple(vs)) => {
+            let count = (*count).max(0) as usize;
+            let count = count.min(vs.len());
+            Ok(Value::Tuple(vs[count..].to_vec()))
+        }
+        _ => Err(EvalError::type_error_msg(format!(
+            "drop requires (Int, Tensor/Tuple), got ({}, {})",
+            n.type_name(),
+            arr.type_name()
+        ))),
+    }
+}
+
+/// index arr idx: Get element at index
+fn index(arr: Value, idx: Value) -> EvalResult<Value> {
+    match (&arr, &idx) {
+        (Value::Tensor(t), Value::Int(i)) => {
+            let i = *i as usize;
+            t.get_flat(i).ok_or_else(|| EvalError::IndexOutOfBounds { index: i, size: t.len() })
+        }
+        (Value::Tuple(vs), Value::Int(i)) => {
+            let i = *i as usize;
+            vs.get(i).cloned().ok_or_else(|| EvalError::IndexOutOfBounds { index: i, size: vs.len() })
+        }
+        _ => Err(EvalError::type_error_msg(format!(
+            "index requires (Tensor/Tuple, Int), got ({}, {})",
+            arr.type_name(),
+            idx.type_name()
         ))),
     }
 }
