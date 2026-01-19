@@ -10,6 +10,7 @@ use goth_ast::literal::Literal;
 use goth_ast::op::{BinOp, UnaryOp};
 use goth_ast::shape::{Shape, Dim};
 use goth_ast::decl::{Module, Decl, FnDecl, TypeDecl};
+use goth_ast::effect::{Effect, Effects};
 use thiserror::Error;
 
 /// Parse error
@@ -984,18 +985,32 @@ impl<'a> Parser<'a> {
     /// Parse function declaration
     fn parse_fn_decl(&mut self) -> ParseResult<Decl> {
         self.expect(Token::FnStart)?;
-        
+
         let name = self.expect_ident()?;
         self.expect(Token::Colon)?;
         let sig = self.parse_type()?;
 
-        // Optional where clause, preconditions, postconditions
+        // Optional where clause, preconditions, postconditions, effects
         let constraints = Vec::new();
         let mut preconditions = Vec::new();
         let mut postconditions = Vec::new();
+        let mut effects = Effects::pure();
 
         while self.eat(&Token::FnMid) {
             match self.peek() {
+                Some(Token::Diamond) => {
+                    self.next();  // consume ◇
+                    // Parse effect name: io, mut, rand, div, etc.
+                    let effect_name = self.expect_ident()?;
+                    let effect = match effect_name.as_str() {
+                        "io" | "IO" => Effect::Io,
+                        "mut" | "Mut" => Effect::Mut,
+                        "rand" | "Rand" => Effect::Rand,
+                        "div" | "Div" => Effect::Div,
+                        other => Effect::Custom(other.into()),
+                    };
+                    effects = effects.with(effect);
+                }
                 Some(Token::Where) => {
                     self.next();
                     // Parse constraints (simplified)
@@ -1019,6 +1034,7 @@ impl<'a> Parser<'a> {
             name: name.into(),
             type_params: vec![],
             signature: sig,
+            effects,
             constraints,
             preconditions,
             postconditions,

@@ -319,9 +319,10 @@ mod tests {
     #[test]
     fn test_check_multi_arg_function() {
         use goth_ast::decl::{Module, Decl, FnDecl};
-        
+        use goth_ast::effect::Effects;
+
         let mut checker = TypeChecker::new();
-        
+
         // Create: add : I64 → I64 → I64, body: ₀ + ₁
         let fn_type = Type::func(
             Type::Prim(PrimType::I64),
@@ -330,16 +331,17 @@ mod tests {
                 Type::Prim(PrimType::I64)
             )
         );
-        
+
         let body = Expr::BinOp(
             BinOp::Add,
             Box::new(Expr::Idx(0)),  // ₀
             Box::new(Expr::Idx(1)),  // ₁
         );
-        
+
         let fn_decl = FnDecl {
             name: "add".into(),
             signature: fn_type.clone(),
+            effects: Effects::pure(),
             body,
             preconditions: vec![],
             postconditions: vec![],
@@ -363,9 +365,10 @@ mod tests {
     #[test]
     fn test_check_three_arg_function() {
         use goth_ast::decl::{Module, Decl, FnDecl};
-        
+        use goth_ast::effect::Effects;
+
         let mut checker = TypeChecker::new();
-        
+
         // Create: add3 : I64 → I64 → I64 → I64, body: ₀ + ₁ + ₂
         let fn_type = Type::func(
             Type::Prim(PrimType::I64),
@@ -377,7 +380,7 @@ mod tests {
                 )
             )
         );
-        
+
         let body = Expr::BinOp(
             BinOp::Add,
             Box::new(Expr::BinOp(
@@ -387,10 +390,11 @@ mod tests {
             )),
             Box::new(Expr::Idx(2)),  // ₂
         );
-        
+
         let fn_decl = FnDecl {
             name: "add3".into(),
             signature: fn_type.clone(),
+            effects: Effects::pure(),
             body,
             preconditions: vec![],
             postconditions: vec![],
@@ -410,9 +414,10 @@ mod tests {
     #[test]
     fn test_multi_arg_with_operators() {
         use goth_ast::decl::{Module, Decl, FnDecl};
-        
+        use goth_ast::effect::Effects;
+
         let mut checker = TypeChecker::new();
-        
+
         // Create: pythag : F64 → F64 → F64, body: √(₀ × ₀ + ₁ × ₁)
         let fn_type = Type::func(
             Type::Prim(PrimType::F64),
@@ -421,7 +426,7 @@ mod tests {
                 Type::Prim(PrimType::F64)
             )
         );
-        
+
         let body = Expr::UnaryOp(
             UnaryOp::Sqrt,
             Box::new(Expr::BinOp(
@@ -438,10 +443,11 @@ mod tests {
                 )),
             )),
         );
-        
+
         let fn_decl = FnDecl {
             name: "pythag".into(),
             signature: fn_type.clone(),
+            effects: Effects::pure(),
             body,
             preconditions: vec![],
             postconditions: vec![],
@@ -461,9 +467,10 @@ mod tests {
     #[test]
     fn test_multi_arg_wrong_arity() {
         use goth_ast::decl::{Module, Decl, FnDecl};
-        
+        use goth_ast::effect::Effects;
+
         let mut checker = TypeChecker::new();
-        
+
         // Create: bad : I64 → I64 → I64, body: ₀ + ₂ (₂ out of bounds!)
         let fn_type = Type::func(
             Type::Prim(PrimType::I64),
@@ -472,16 +479,17 @@ mod tests {
                 Type::Prim(PrimType::I64)
             )
         );
-        
+
         let body = Expr::BinOp(
             BinOp::Add,
             Box::new(Expr::Idx(0)),  // ₀
             Box::new(Expr::Idx(2)),  // ₂ - should be out of bounds!
         );
-        
+
         let fn_decl = FnDecl {
             name: "bad".into(),
             signature: fn_type.clone(),
+            effects: Effects::pure(),
             body,
             preconditions: vec![],
             postconditions: vec![],
@@ -771,6 +779,7 @@ mod tests {
         // Test that we can define functions with shape-annotated types
         use goth_ast::decl::{Module, Decl, FnDecl};
         use goth_ast::shape::{Shape, Dim};
+        use goth_ast::effect::Effects;
 
         let mut checker = TypeChecker::new();
 
@@ -785,6 +794,7 @@ mod tests {
         let fn_decl = FnDecl {
             name: "id_vec".into(),
             signature: fn_type.clone(),
+            effects: Effects::pure(),
             body: Expr::Idx(0), // λ→ ₀
             preconditions: vec![],
             postconditions: vec![],
@@ -806,6 +816,7 @@ mod tests {
         // Test that shape mismatches in function signatures are caught
         use goth_ast::decl::{Module, Decl, FnDecl};
         use goth_ast::shape::{Shape, Dim};
+        use goth_ast::effect::Effects;
 
         let mut checker = TypeChecker::new();
 
@@ -825,6 +836,7 @@ mod tests {
         let fn_decl = FnDecl {
             name: "bad".into(),
             signature: fn_type.clone(),
+            effects: Effects::pure(),
             body: Expr::Idx(0), // λ→ ₀
             preconditions: vec![],
             postconditions: vec![],
