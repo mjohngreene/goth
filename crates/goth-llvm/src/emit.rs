@@ -381,6 +381,18 @@ fn emit_stmt(ctx: &mut LlvmContext, stmt: &Stmt, output: &mut String) -> Result<
                     );
                     (ssa, code)
                 }
+                goth_ast::op::UnaryOp::Sign => {
+                    // sign(x) = copysign(1.0, x) for non-zero, 0 for zero
+                    // Emits: fcmp, copysign, select - must allocate SSAs in order
+                    let cmp_ssa = ctx.fresh_ssa();
+                    let copysign_ssa = ctx.fresh_ssa();
+                    let select_ssa = ctx.fresh_ssa();
+                    let code = format!(
+                        "  {} = fcmp one double {}, 0.0\n  {} = call double @copysign(double 1.0, double {})\n  {} = select i1 {}, double {}, double 0.0\n",
+                        cmp_ssa, op_val, copysign_ssa, op_val, select_ssa, cmp_ssa, copysign_ssa
+                    );
+                    (select_ssa, code)
+                }
                 _ => {
                     let ssa = ctx.fresh_ssa();
                     let code = match op {
@@ -420,6 +432,36 @@ fn emit_stmt(ctx: &mut LlvmContext, stmt: &Stmt, output: &mut String) -> Result<
                         }
                         goth_ast::op::UnaryOp::Abs => {
                             format!("  {} = call double @fabs(double {})\n", ssa, op_val)
+                        }
+                        goth_ast::op::UnaryOp::Tan => {
+                            format!("  {} = call double @tan(double {})\n", ssa, op_val)
+                        }
+                        goth_ast::op::UnaryOp::Asin => {
+                            format!("  {} = call double @asin(double {})\n", ssa, op_val)
+                        }
+                        goth_ast::op::UnaryOp::Acos => {
+                            format!("  {} = call double @acos(double {})\n", ssa, op_val)
+                        }
+                        goth_ast::op::UnaryOp::Atan => {
+                            format!("  {} = call double @atan(double {})\n", ssa, op_val)
+                        }
+                        goth_ast::op::UnaryOp::Sinh => {
+                            format!("  {} = call double @sinh(double {})\n", ssa, op_val)
+                        }
+                        goth_ast::op::UnaryOp::Cosh => {
+                            format!("  {} = call double @cosh(double {})\n", ssa, op_val)
+                        }
+                        goth_ast::op::UnaryOp::Tanh => {
+                            format!("  {} = call double @tanh(double {})\n", ssa, op_val)
+                        }
+                        goth_ast::op::UnaryOp::Log10 => {
+                            format!("  {} = call double @log10(double {})\n", ssa, op_val)
+                        }
+                        goth_ast::op::UnaryOp::Log2 => {
+                            format!("  {} = call double @log2(double {})\n", ssa, op_val)
+                        }
+                        goth_ast::op::UnaryOp::Round => {
+                            format!("  {} = call double @round(double {})\n", ssa, op_val)
                         }
                         _ => return Err(LlvmError::UnsupportedOp(format!("{:?}", op))),
                     };

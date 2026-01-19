@@ -673,10 +673,21 @@ fn unop_str(op: &crate::op::UnaryOp, unicode: bool) -> &'static str {
         UnaryOp::Scan => if unicode { "⍀" } else { "scan " },
         UnaryOp::Gamma => if unicode { "Γ" } else { "gamma " },
         UnaryOp::Ln => "ln ",
+        UnaryOp::Log10 => if unicode { "log₁₀ " } else { "log10 " },
+        UnaryOp::Log2 => if unicode { "log₂ " } else { "log2 " },
         UnaryOp::Exp => "exp ",
         UnaryOp::Sin => "sin ",
         UnaryOp::Cos => "cos ",
+        UnaryOp::Tan => "tan ",
+        UnaryOp::Asin => "asin ",
+        UnaryOp::Acos => "acos ",
+        UnaryOp::Atan => "atan ",
+        UnaryOp::Sinh => "sinh ",
+        UnaryOp::Cosh => "cosh ",
+        UnaryOp::Tanh => "tanh ",
         UnaryOp::Abs => "abs ",
+        UnaryOp::Sign => "sign ",
+        UnaryOp::Round => "round ",
     }
 }
 

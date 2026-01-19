@@ -222,6 +222,61 @@ impl<'a> Parser<'a> {
                 let operand = self.parse_prefix()?;
                 Ok(Expr::UnaryOp(UnaryOp::Abs, Box::new(operand)))
             }
+            Some(Token::Tan) => {
+                self.next();
+                let operand = self.parse_prefix()?;
+                Ok(Expr::UnaryOp(UnaryOp::Tan, Box::new(operand)))
+            }
+            Some(Token::Asin) => {
+                self.next();
+                let operand = self.parse_prefix()?;
+                Ok(Expr::UnaryOp(UnaryOp::Asin, Box::new(operand)))
+            }
+            Some(Token::Acos) => {
+                self.next();
+                let operand = self.parse_prefix()?;
+                Ok(Expr::UnaryOp(UnaryOp::Acos, Box::new(operand)))
+            }
+            Some(Token::Atan) => {
+                self.next();
+                let operand = self.parse_prefix()?;
+                Ok(Expr::UnaryOp(UnaryOp::Atan, Box::new(operand)))
+            }
+            Some(Token::Sinh) => {
+                self.next();
+                let operand = self.parse_prefix()?;
+                Ok(Expr::UnaryOp(UnaryOp::Sinh, Box::new(operand)))
+            }
+            Some(Token::Cosh) => {
+                self.next();
+                let operand = self.parse_prefix()?;
+                Ok(Expr::UnaryOp(UnaryOp::Cosh, Box::new(operand)))
+            }
+            Some(Token::Tanh) => {
+                self.next();
+                let operand = self.parse_prefix()?;
+                Ok(Expr::UnaryOp(UnaryOp::Tanh, Box::new(operand)))
+            }
+            Some(Token::Log10) => {
+                self.next();
+                let operand = self.parse_prefix()?;
+                Ok(Expr::UnaryOp(UnaryOp::Log10, Box::new(operand)))
+            }
+            Some(Token::Log2) => {
+                self.next();
+                let operand = self.parse_prefix()?;
+                Ok(Expr::UnaryOp(UnaryOp::Log2, Box::new(operand)))
+            }
+            Some(Token::Round) => {
+                self.next();
+                let operand = self.parse_prefix()?;
+                Ok(Expr::UnaryOp(UnaryOp::Round, Box::new(operand)))
+            }
+            Some(Token::Sign) => {
+                self.next();
+                let operand = self.parse_prefix()?;
+                Ok(Expr::UnaryOp(UnaryOp::Sign, Box::new(operand)))
+            }
             _ => self.parse_atom(),
         }
     }

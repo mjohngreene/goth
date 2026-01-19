@@ -221,6 +221,31 @@ pub enum Token {
     Cos,
     #[token("abs")]
     Abs,
+    #[token("tan")]
+    Tan,
+    #[token("asin")]
+    Asin,
+    #[token("acos")]
+    Acos,
+    #[token("atan")]
+    Atan,
+    #[token("sinh")]
+    Sinh,
+    #[token("cosh")]
+    Cosh,
+    #[token("tanh")]
+    Tanh,
+    #[token("log₁₀")]
+    #[token("log10")]
+    Log10,
+    #[token("log₂")]
+    #[token("log2")]
+    Log2,
+    #[token("round")]
+    Round,
+    #[token("sign")]
+    #[token("signum")]
+    Sign,
 
     // ============ Arrows ============
     #[token("→")]

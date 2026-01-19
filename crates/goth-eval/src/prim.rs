@@ -31,12 +31,23 @@ pub fn apply_unaryop(op: &goth_ast::op::UnaryOp, value: Value) -> EvalResult<Val
         Sqrt => sqrt(value),
         Floor => floor(value),
         Ceil => ceil(value),
+        Round => round(value),
         Gamma => gamma(value),
         Ln => ln(value),
+        Log10 => log10(value),
+        Log2 => log2(value),
         Exp => exp(value),
         Sin => sin(value),
         Cos => cos(value),
+        Tan => tan(value),
+        Asin => asin(value),
+        Acos => acos(value),
+        Atan => atan(value),
+        Sinh => sinh(value),
+        Cosh => cosh(value),
+        Tanh => tanh(value),
         Abs => abs(value),
+        Sign => sign(value),
     }
 }
 
@@ -193,13 +204,22 @@ fn abs(value: Value) -> EvalResult<Value> {
 
 fn exp(value: Value) -> EvalResult<Value> { let f = value.coerce_float().ok_or_else(|| EvalError::type_error("numeric", &value))?; Ok(Value::Float(OrderedFloat(f.exp()))) }
 fn ln(value: Value) -> EvalResult<Value> { let f = value.coerce_float().ok_or_else(|| EvalError::type_error("numeric", &value))?; if f <= 0.0 { Err(EvalError::type_error_msg("ln requires positive argument")) } else { Ok(Value::Float(OrderedFloat(f.ln()))) } }
+fn log10(value: Value) -> EvalResult<Value> { let f = value.coerce_float().ok_or_else(|| EvalError::type_error("numeric", &value))?; if f <= 0.0 { Err(EvalError::type_error_msg("log10 requires positive argument")) } else { Ok(Value::Float(OrderedFloat(f.log10()))) } }
+fn log2(value: Value) -> EvalResult<Value> { let f = value.coerce_float().ok_or_else(|| EvalError::type_error("numeric", &value))?; if f <= 0.0 { Err(EvalError::type_error_msg("log2 requires positive argument")) } else { Ok(Value::Float(OrderedFloat(f.log2()))) } }
 fn sqrt(value: Value) -> EvalResult<Value> { let f = value.coerce_float().ok_or_else(|| EvalError::type_error("numeric", &value))?; if f < 0.0 { Err(EvalError::type_error_msg("sqrt requires non-negative argument")) } else { Ok(Value::Float(OrderedFloat(f.sqrt()))) } }
 fn sin(value: Value) -> EvalResult<Value> { let f = value.coerce_float().ok_or_else(|| EvalError::type_error("numeric", &value))?; Ok(Value::Float(OrderedFloat(f.sin()))) }
 fn cos(value: Value) -> EvalResult<Value> { let f = value.coerce_float().ok_or_else(|| EvalError::type_error("numeric", &value))?; Ok(Value::Float(OrderedFloat(f.cos()))) }
 fn tan(value: Value) -> EvalResult<Value> { let f = value.coerce_float().ok_or_else(|| EvalError::type_error("numeric", &value))?; Ok(Value::Float(OrderedFloat(f.tan()))) }
+fn asin(value: Value) -> EvalResult<Value> { let f = value.coerce_float().ok_or_else(|| EvalError::type_error("numeric", &value))?; if f < -1.0 || f > 1.0 { Err(EvalError::type_error_msg("asin requires argument in [-1, 1]")) } else { Ok(Value::Float(OrderedFloat(f.asin()))) } }
+fn acos(value: Value) -> EvalResult<Value> { let f = value.coerce_float().ok_or_else(|| EvalError::type_error("numeric", &value))?; if f < -1.0 || f > 1.0 { Err(EvalError::type_error_msg("acos requires argument in [-1, 1]")) } else { Ok(Value::Float(OrderedFloat(f.acos()))) } }
+fn atan(value: Value) -> EvalResult<Value> { let f = value.coerce_float().ok_or_else(|| EvalError::type_error("numeric", &value))?; Ok(Value::Float(OrderedFloat(f.atan()))) }
+fn sinh(value: Value) -> EvalResult<Value> { let f = value.coerce_float().ok_or_else(|| EvalError::type_error("numeric", &value))?; Ok(Value::Float(OrderedFloat(f.sinh()))) }
+fn cosh(value: Value) -> EvalResult<Value> { let f = value.coerce_float().ok_or_else(|| EvalError::type_error("numeric", &value))?; Ok(Value::Float(OrderedFloat(f.cosh()))) }
+fn tanh(value: Value) -> EvalResult<Value> { let f = value.coerce_float().ok_or_else(|| EvalError::type_error("numeric", &value))?; Ok(Value::Float(OrderedFloat(f.tanh()))) }
 fn floor(value: Value) -> EvalResult<Value> { let f = value.coerce_float().ok_or_else(|| EvalError::type_error("numeric", &value))?; Ok(Value::Int(f.floor() as i128)) }
 fn ceil(value: Value) -> EvalResult<Value> { let f = value.coerce_float().ok_or_else(|| EvalError::type_error("numeric", &value))?; Ok(Value::Int(f.ceil() as i128)) }
 fn round(value: Value) -> EvalResult<Value> { let f = value.coerce_float().ok_or_else(|| EvalError::type_error("numeric", &value))?; Ok(Value::Int(f.round() as i128)) }
+fn sign(value: Value) -> EvalResult<Value> { let f = value.coerce_float().ok_or_else(|| EvalError::type_error("numeric", &value))?; Ok(Value::Float(OrderedFloat(if f > 0.0 { 1.0 } else if f < 0.0 { -1.0 } else { 0.0 }))) }
 
 // Gamma function using Lanczos approximation
 fn gamma(value: Value) -> EvalResult<Value> {
