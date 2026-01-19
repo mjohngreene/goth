@@ -211,11 +211,11 @@ fn test_simple_function() {
 #[test]
 fn test_function_with_if() {
     let source = r#"
-╭─ abs : I → I
+╭─ absolute : I → I
 ╰─ if ₀ < 0 then 0 - ₀ else ₀
 "#;
     let mlir = compile_module_to_mlir(source).unwrap();
-    assert!(mlir.contains("func.func @abs"));
+    assert!(mlir.contains("func.func @absolute"));
     assert!(mlir.contains("cf.cond_br"));
 }
 
