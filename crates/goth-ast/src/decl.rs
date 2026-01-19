@@ -32,6 +32,16 @@ pub enum Decl {
 
     /// Operator definition
     Op(OpDecl),
+
+    /// Use/import declaration (resolved at load time)
+    /// use "path/to/file.goth"
+    Use(UseDecl),
+}
+
+/// Use declaration - imports another file's declarations
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UseDecl {
+    pub path: Box<str>,
 }
 
 /// Function declaration
@@ -284,4 +294,14 @@ impl From<ImplDecl> for Decl {
 
 impl From<LetDecl> for Decl {
     fn from(l: LetDecl) -> Self { Decl::Let(l) }
+}
+
+impl From<UseDecl> for Decl {
+    fn from(u: UseDecl) -> Self { Decl::Use(u) }
+}
+
+impl UseDecl {
+    pub fn new(path: impl Into<Box<str>>) -> Self {
+        UseDecl { path: path.into() }
+    }
 }

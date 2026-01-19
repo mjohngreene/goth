@@ -1067,7 +1067,22 @@ impl<'a> Parser<'a> {
             Some(Token::FnStart) => Ok(Some(self.parse_fn_decl()?)),
             Some(Token::Let) => Ok(Some(self.parse_let_decl()?)),
             Some(Token::Type) => Ok(Some(self.parse_type_decl()?)),
+            Some(Token::Use) => Ok(Some(self.parse_use_decl()?)),
             _ => Ok(None),
+        }
+    }
+
+    /// Parse use declaration: use "path/to/file.goth"
+    fn parse_use_decl(&mut self) -> ParseResult<Decl> {
+        self.expect(Token::Use)?;
+        match self.next() {
+            Some(Token::String(path)) => {
+                Ok(Decl::Use(goth_ast::decl::UseDecl::new(path)))
+            }
+            other => Err(ParseError::Unexpected {
+                found: other,
+                expected: "string path".to_string()
+            }),
         }
     }
 

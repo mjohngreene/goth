@@ -89,6 +89,12 @@ impl Pretty {
             Decl::Impl(i) => self.print_impl(i),
             Decl::Let(l) => self.print_let_decl(l),
             Decl::Op(_) => todo!("op decl pretty printing"),
+            Decl::Use(u) => {
+                self.write("use \"");
+                self.write(&u.path);
+                self.write("\"");
+                self.newline();
+            }
         }
     }
 

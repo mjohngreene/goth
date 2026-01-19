@@ -79,6 +79,8 @@ pub enum Token {
     Type,
     #[token("fn")]
     Fn,
+    #[token("use")]
+    Use,
 
     // ============ Function Box ============
     #[token("╭─")]
@@ -443,14 +445,16 @@ fn unescape_char(s: &str) -> Option<char> {
 }
 
 impl Token {
-    /// Check if token can start an expression
+    /// Check if token can start an expression (for function application)
+    /// Note: Keywords like Let, If, Match, Do are excluded because they can
+    /// start top-level declarations and shouldn't be parsed as function arguments
+    /// in juxtaposition. They're handled explicitly in parse_atom/parse_prefix.
     pub fn can_start_expr(&self) -> bool {
         matches!(self,
             Token::Int(_) | Token::Float(_) | Token::String(_) | Token::Char(_) |
             Token::True | Token::False | Token::Pi | Token::Euler |
             Token::Ident(_) | Token::TyVar(_) | Token::AplIdent(_) |
             Token::Lambda | Token::LParen | Token::LBracket | Token::LAngle |
-            Token::If | Token::Match | Token::Let | Token::Do |
             Token::Index(_) |
             Token::Minus | Token::Not | Token::Sum | Token::Prod | Token::Scan |
             Token::Norm | Token::Underscore

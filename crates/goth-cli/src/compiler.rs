@@ -67,10 +67,6 @@ fn main() {
 }
 
 fn run_compiler(args: &Args) -> Result<(), String> {
-    // Read source file
-    let source = fs::read_to_string(&args.input)
-        .map_err(|e| format!("Failed to read {}: {}", args.input.display(), e))?;
-
     let input_name = args.input.file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("output");
@@ -79,12 +75,12 @@ fn run_compiler(args: &Args) -> Result<(), String> {
         eprintln!("{} {}", "Compiling".green().bold(), args.input.display());
     }
 
-    // Parse
+    // Parse and resolve imports
     if args.verbose {
-        eprintln!("  {} Parsing...", "→".cyan());
+        eprintln!("  {} Parsing and resolving imports...", "→".cyan());
     }
-    let module = parse_module(&source, input_name)
-        .map_err(|e| format!("Parse error: {}", e))?;
+    let module = load_file(&args.input)
+        .map_err(|e| format!("Load error: {}", e))?;
 
     // Resolve (de Bruijn indices)
     if args.verbose {
