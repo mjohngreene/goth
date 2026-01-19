@@ -192,8 +192,21 @@ fn emit_constant(ctx: &mut LlvmContext, constant: &Constant, ty: &Type) -> Resul
             return Ok((n.to_string(), String::new()));
         }
         Constant::Float(f) => {
-            // LLVM requires hex format for floats
-            return Ok((format!("{:e}", f), String::new()));
+            // LLVM requires floats to have a decimal point or be in hex format
+            // Use scientific notation but ensure there's always a decimal point
+            let s = format!("{:e}", f);
+            // If the mantissa doesn't contain a decimal point, add ".0"
+            let formatted = if !s.contains('.') {
+                // Find 'e' and insert ".0" before it
+                if let Some(e_pos) = s.find('e') {
+                    format!("{}.0{}", &s[..e_pos], &s[e_pos..])
+                } else {
+                    format!("{}.0", s)
+                }
+            } else {
+                s
+            };
+            return Ok((formatted, String::new()));
         }
         Constant::Bool(b) => {
             let val = if *b { "1" } else { "0" };

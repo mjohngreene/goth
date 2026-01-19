@@ -273,6 +273,14 @@ pub enum Token {
     #[token("false")]
     False,
 
+    // ============ Math Constants ============
+    #[token("π", priority = 5)]
+    #[token("pi")]
+    Pi,
+    #[token("𝕖", priority = 5)]
+    #[token("euler")]
+    Euler,
+
     // ============ Special ============
     #[token("∞")]
     #[token("inf")]
@@ -414,7 +422,7 @@ impl Token {
     pub fn can_start_expr(&self) -> bool {
         matches!(self,
             Token::Int(_) | Token::Float(_) | Token::String(_) | Token::Char(_) |
-            Token::True | Token::False |
+            Token::True | Token::False | Token::Pi | Token::Euler |
             Token::Ident(_) | Token::TyVar(_) | Token::AplIdent(_) |
             Token::Lambda | Token::LParen | Token::LBracket | Token::LAngle |
             Token::If | Token::Match | Token::Let | Token::Do |
@@ -462,6 +470,8 @@ impl fmt::Display for Token {
             Token::Index(i) => write!(f, "_{}", i),
             Token::True => write!(f, "⊤"),
             Token::False => write!(f, "⊥"),
+            Token::Pi => write!(f, "π"),
+            Token::Euler => write!(f, "𝕖"),
             Token::Plus => write!(f, "+"),
             Token::Minus => write!(f, "-"),
             Token::Star => write!(f, "×"),

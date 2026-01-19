@@ -236,6 +236,8 @@ impl<'a> Parser<'a> {
             Some(Token::Char(c)) => { self.next(); Expr::Lit(Literal::Char(c)) }
             Some(Token::True) => { self.next(); Expr::Lit(Literal::True) }
             Some(Token::False) => { self.next(); Expr::Lit(Literal::False) }
+            Some(Token::Pi) => { self.next(); Expr::Lit(Literal::Float(std::f64::consts::PI)) }
+            Some(Token::Euler) => { self.next(); Expr::Lit(Literal::Float(std::f64::consts::E)) }
 
             // De Bruijn index
             Some(Token::Index(i)) => { self.next(); Expr::Idx(i) }
@@ -696,6 +698,8 @@ impl<'a> Parser<'a> {
             Some(Token::String(s)) => { self.next(); Ok(Pattern::Lit(Literal::String(s.into()))) }
             Some(Token::True) => { self.next(); Ok(Pattern::Lit(Literal::True)) }
             Some(Token::False) => { self.next(); Ok(Pattern::Lit(Literal::False)) }
+            Some(Token::Pi) => { self.next(); Ok(Pattern::Lit(Literal::Float(std::f64::consts::PI))) }
+            Some(Token::Euler) => { self.next(); Ok(Pattern::Lit(Literal::Float(std::f64::consts::E))) }
 
             Some(Token::Ident(name)) | Some(Token::TyVar(name)) | Some(Token::AplIdent(name)) => {
                 self.next();
