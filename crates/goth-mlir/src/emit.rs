@@ -111,7 +111,18 @@ pub fn emit_type(ty: &Type) -> Result<String> {
             let ret_ty = emit_type(ret)?;
             Ok(format!("({}) -> {}", arg_ty, ret_ty))
         }
-        
+
+        // Type variables - map to concrete MLIR types
+        Type::Var(name) => {
+            match name.as_ref() {
+                "I" | "Int" | "ℤ" => Ok("i64".to_string()),
+                "F" | "Float" => Ok("f64".to_string()),
+                "B" | "Bool" => Ok("i1".to_string()),
+                "N" | "Nat" | "ℕ" => Ok("i64".to_string()),  // Naturals as i64
+                _ => Ok("i64".to_string()),  // Default to i64
+            }
+        }
+
         _ => Err(MlirError::UnsupportedType(format!("{:?}", ty))),
     }
 }
@@ -172,14 +183,32 @@ fn emit_operand(ctx: &mut MlirContext, op: &Operand, output: &mut String) -> Res
     }
 }
 
+/// Check if a type is integer-like (i64, I, Int, etc.)
+fn is_int_type(ty: &Type) -> bool {
+    match ty {
+        Type::Prim(PrimType::I64) => true,
+        Type::Var(name) => matches!(name.as_ref(), "I" | "Int" | "ℤ" | "N" | "Nat" | "ℕ"),
+        _ => false,
+    }
+}
+
+/// Check if a type is float-like (f64, F, Float, etc.)
+fn is_float_type(ty: &Type) -> bool {
+    match ty {
+        Type::Prim(PrimType::F64) => true,
+        Type::Var(name) => matches!(name.as_ref(), "F" | "Float"),
+        _ => false,
+    }
+}
+
 /// Emit binary operation
-fn emit_binop(ctx: &mut MlirContext, op: &goth_ast::op::BinOp, 
+fn emit_binop(ctx: &mut MlirContext, op: &goth_ast::op::BinOp,
               left: String, right: String, ty: &Type) -> Result<String> {
     let ssa = ctx.fresh_ssa();
     let mlir_ty = emit_type(ty)?;
-    
-    let op_name = match ty {
-        Type::Prim(PrimType::I64) => match op {
+
+    let op_name = if is_int_type(ty) {
+        match op {
             goth_ast::op::BinOp::Add => "arith.addi",
             goth_ast::op::BinOp::Sub => "arith.subi",
             goth_ast::op::BinOp::Mul => "arith.muli",
@@ -192,8 +221,9 @@ fn emit_binop(ctx: &mut MlirContext, op: &goth_ast::op::BinOp,
             goth_ast::op::BinOp::Eq => "arith.cmpi eq,",
             goth_ast::op::BinOp::Neq => "arith.cmpi ne,",
             _ => return Err(MlirError::UnsupportedOp(format!("{:?}", op))),
-        },
-        Type::Prim(PrimType::F64) => match op {
+        }
+    } else if is_float_type(ty) {
+        match op {
             goth_ast::op::BinOp::Add => "arith.addf",
             goth_ast::op::BinOp::Sub => "arith.subf",
             goth_ast::op::BinOp::Mul => "arith.mulf",
@@ -205,8 +235,9 @@ fn emit_binop(ctx: &mut MlirContext, op: &goth_ast::op::BinOp,
             goth_ast::op::BinOp::Eq => "arith.cmpf oeq,",
             goth_ast::op::BinOp::Neq => "arith.cmpf one,",
             _ => return Err(MlirError::UnsupportedOp(format!("{:?}", op))),
-        },
-        _ => return Err(MlirError::UnsupportedType(format!("{:?}", ty))),
+        }
+    } else {
+        return Err(MlirError::UnsupportedType(format!("{:?}", ty)));
     };
     
     Ok(format!("{}{} = {} {}, {} : {}\n", 
@@ -214,33 +245,59 @@ fn emit_binop(ctx: &mut MlirContext, op: &goth_ast::op::BinOp,
 }
 
 /// Emit unary operation
-fn emit_unary(ctx: &mut MlirContext, op: &goth_ast::op::UnaryOp, 
+fn emit_unary(ctx: &mut MlirContext, op: &goth_ast::op::UnaryOp,
               operand: String, ty: &Type) -> Result<String> {
     let ssa = ctx.fresh_ssa();
     let mlir_ty = emit_type(ty)?;
-    
+
+    // Handle reduction operations specially (they reduce tensor to scalar)
+    match op {
+        goth_ast::op::UnaryOp::Sum => {
+            return Ok(format!("{}{} = goth.reduce_sum {} : {}\n",
+                ctx.indent_str(), ssa, operand, mlir_ty));
+        }
+        goth_ast::op::UnaryOp::Prod => {
+            return Ok(format!("{}{} = goth.reduce_prod {} : {}\n",
+                ctx.indent_str(), ssa, operand, mlir_ty));
+        }
+        _ => {}
+    }
+
     let op_name = match op {
-        goth_ast::op::UnaryOp::Neg => match ty {
-            Type::Prim(PrimType::I64) => "arith.subi",
-            Type::Prim(PrimType::F64) => "arith.negf",
-            _ => return Err(MlirError::UnsupportedType(format!("{:?}", ty))),
+        goth_ast::op::UnaryOp::Neg => {
+            if is_int_type(ty) {
+                "arith.subi"
+            } else if is_float_type(ty) {
+                "arith.negf"
+            } else {
+                return Err(MlirError::UnsupportedType(format!("{:?}", ty)));
+            }
         },
         goth_ast::op::UnaryOp::Sqrt => "math.sqrt",
         goth_ast::op::UnaryOp::Floor => "math.floor",
         goth_ast::op::UnaryOp::Ceil => "math.ceil",
+        goth_ast::op::UnaryOp::Not => "arith.xori",  // XOR with 1 for boolean NOT
         _ => return Err(MlirError::UnsupportedOp(format!("{:?}", op))),
     };
-    
-    if matches!(op, goth_ast::op::UnaryOp::Neg) && matches!(ty, Type::Prim(PrimType::I64)) {
+
+    if matches!(op, goth_ast::op::UnaryOp::Neg) && is_int_type(ty) {
         // Integer negation: 0 - x
         let zero = ctx.fresh_ssa();
-        let mut code = format!("{}{} = arith.constant 0 : {}\n", 
+        let mut code = format!("{}{} = arith.constant 0 : {}\n",
             ctx.indent_str(), zero, mlir_ty);
-        code.push_str(&format!("{}{} = {} {}, {} : {}\n", 
+        code.push_str(&format!("{}{} = {} {}, {} : {}\n",
             ctx.indent_str(), ssa, op_name, zero, operand, mlir_ty));
         Ok(code)
+    } else if matches!(op, goth_ast::op::UnaryOp::Not) {
+        // Boolean NOT: XOR with 1
+        let one = ctx.fresh_ssa();
+        let mut code = format!("{}{} = arith.constant true : {}\n",
+            ctx.indent_str(), one, mlir_ty);
+        code.push_str(&format!("{}{} = {} {}, {} : {}\n",
+            ctx.indent_str(), ssa, op_name, operand, one, mlir_ty));
+        Ok(code)
     } else {
-        Ok(format!("{}{} = {} {} : {}\n", 
+        Ok(format!("{}{} = {} {} : {}\n",
             ctx.indent_str(), ssa, op_name, operand, mlir_ty))
     }
 }

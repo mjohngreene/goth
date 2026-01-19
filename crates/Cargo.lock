@@ -285,6 +285,7 @@ version = "0.1.0"
 dependencies = [
  "goth-ast",
  "goth-check",
+ "goth-mlir",
  "goth-parse",
  "thiserror",
 ]

@@ -528,8 +528,74 @@ pub fn lower_expr_to_operand(ctx: &mut LoweringContext, expr: &Expr) -> MirResul
             Ok((Operand::Local(dest), array_ty))
         }
         
+        // ============ Field Access ============
+
+        Expr::Field(base, access) => {
+            let (base_op, base_ty) = lower_expr_to_operand(ctx, base)?;
+
+            // Determine result type from base type
+            let (field_idx, result_ty) = match access {
+                goth_ast::expr::FieldAccess::Index(idx) => {
+                    // Numeric index into tuple
+                    let elem_ty = match &base_ty {
+                        Type::Tuple(fields) => {
+                            fields.get(*idx as usize)
+                                .map(|f| f.ty.clone())
+                                .unwrap_or(Type::Prim(goth_ast::types::PrimType::I64))
+                        }
+                        _ => Type::Prim(goth_ast::types::PrimType::I64),
+                    };
+                    (*idx as usize, elem_ty)
+                }
+                goth_ast::expr::FieldAccess::Named(name) => {
+                    // Named field - find index in tuple
+                    let (idx, elem_ty) = match &base_ty {
+                        Type::Tuple(fields) => {
+                            fields.iter().enumerate()
+                                .find(|(_, f)| f.label.as_ref().map(|l| l.as_ref()) == Some(name.as_ref()))
+                                .map(|(i, f)| (i, f.ty.clone()))
+                                .unwrap_or((0, Type::Prim(goth_ast::types::PrimType::I64)))
+                        }
+                        _ => (0, Type::Prim(goth_ast::types::PrimType::I64)),
+                    };
+                    (idx, elem_ty)
+                }
+            };
+
+            let dest = ctx.fresh_local();
+            ctx.emit(dest, result_ty.clone(), Rhs::TupleField(base_op, field_idx));
+
+            Ok((Operand::Local(dest), result_ty))
+        }
+
+        // ============ Array Indexing ============
+
+        Expr::Index(arr, indices) => {
+            let (arr_op, arr_ty) = lower_expr_to_operand(ctx, arr)?;
+
+            // For now, only handle single index
+            if indices.len() != 1 {
+                return Err(MirError::CannotLower(
+                    "Multi-dimensional indexing not yet supported".to_string()
+                ));
+            }
+
+            let (idx_op, _) = lower_expr_to_operand(ctx, &indices[0])?;
+
+            // Result type is element type of tensor
+            let elem_ty = match &arr_ty {
+                Type::Tensor(_, elem) => (**elem).clone(),
+                _ => Type::Prim(goth_ast::types::PrimType::I64),
+            };
+
+            let dest = ctx.fresh_local();
+            ctx.emit(dest, elem_ty.clone(), Rhs::Index(arr_op, idx_op));
+
+            Ok((Operand::Local(dest), elem_ty))
+        }
+
         // ============ TODO: More expressions ============
-        
+
         _ => Err(MirError::CannotLower(format!("Expression type not yet implemented: {:?}", expr))),
     }
 }
