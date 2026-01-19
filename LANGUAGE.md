@@ -69,6 +69,30 @@ Goth uses **de Bruijn indices** for variable binding instead of named variables.
 λ→ λ→ ₁ + ₀   # outer arg is ₁, inner arg is ₀
 ```
 
+### Index Binding Rules
+
+**In function declarations** with multiple arguments, indices are bound in order:
+```goth
+╭─ f : A → B → C
+╰─ ...          # ₀ = first arg (A), ₁ = second arg (B)
+```
+
+**In nested lambdas**, the innermost lambda's argument is ₀:
+```goth
+λ→ λ→ body    # ₀ = second/inner arg, ₁ = first/outer arg
+```
+
+**Important: Let bindings shift indices.** After `let x ← expr in body`, within `body`:
+- `x` is bound at ₀
+- All previous bindings shift up by 1
+
+```goth
+╭─ f : ⟨I, I⟩ → I
+╰─ let a ← ₀.0 in   # ₀ = the tuple argument
+   let b ← ₁.1 in   # After first let: ₀ = a, ₁ = original tuple
+   a + b            # After second let: ₀ = b, ₁ = a, ₂ = tuple
+```
+
 ---
 
 ## Types
@@ -344,23 +368,24 @@ let pattern ← value in body
 
 ### Sequence Generation
 
-| Name | Signature | Description |
-|------|-----------|-------------|
-| `iota` | `I → [n]I` | Generate `[0, 1, 2, ..., n-1]` |
-| `range` | `I → I → [m]I` | Generate `[start, ..., end-1]` |
+| Name | Alias | Signature | Description |
+|------|-------|-----------|-------------|
+| `iota` | `ι`, `⍳` | `I → [n]I` | Generate `[0, 1, 2, ..., n-1]` |
+| `range` | `…` | `I → I → [m]I` | Generate `[start, ..., end-1]` |
 
 ### Array Operations
 
-| Name | Signature | Description |
-|------|-----------|-------------|
-| `len` | `[n]α → I` | Array length |
-| `sum` | `[n]I → I` | Sum elements |
-| `prod` | `[n]I → I` | Product elements |
-| `reverse` | `[n]α → [n]α` | Reverse array |
-| `concat` | `[n]α → [m]α → [n+m]α` | Concatenate |
-| `take` | `I → [n]α → [m]α` | Take first k elements |
-| `drop` | `I → [n]α → [m]α` | Drop first k elements |
-| `index` | `[n]α → I → α` | Get element at index |
+| Name | Alias | Signature | Description |
+|------|-------|-----------|-------------|
+| `len` | - | `[n]α → I` | Array length |
+| `sum` | - | `[n]I → I` | Sum elements |
+| `prod` | - | `[n]I → I` | Product elements |
+| `reverse` | `⌽` | `[n]α → [n]α` | Reverse array |
+| `concat` | - | `[n]α → [m]α → [n+m]α` | Concatenate |
+| `take` | `↑` | `I → [n]α → [m]α` | Take first k elements |
+| `drop` | `↓` | `I → [n]α → [m]α` | Drop first k elements |
+| `index` | - | `[n]α → I → α` | Get element at index |
+| `shape` | `ρ` | `[...]α → [n]I` | Get tensor shape |
 
 ### Math Functions
 
@@ -377,22 +402,23 @@ let pattern ← value in body
 
 ### Linear Algebra
 
-| Name | Signature | Description |
-|------|-----------|-------------|
-| `dot` | `[n]F64 → [n]F64 → F64` | Dot product |
-| `norm` | `[n]F64 → F64` | Vector norm |
-| `matmul` | `[m n]F64 → [n p]F64 → [m p]F64` | Matrix multiply |
-| `transpose` | `[m n]α → [n m]α` | Transpose |
+| Name | Alias | Signature | Description |
+|------|-------|-----------|-------------|
+| `dot` | `·` | `[n]F64 → [n]F64 → F64` | Dot product |
+| `norm` | - | `[n]F64 → F64` | Vector norm |
+| `matmul` | - | `[m n]F64 → [n p]F64 → [m p]F64` | Matrix multiply |
+| `transpose` | `⍉` | `[m n]α → [n m]α` | Transpose |
 
 ### Conversion
 
-| Name | Signature | Description |
-|------|-----------|-------------|
-| `toInt` | `α → I` | Convert to integer |
-| `toFloat` | `α → F64` | Convert to float |
-| `toBool` | `α → Bool` | Convert to boolean |
-| `toChar` | `I → Char` | Integer to character |
-| `toString` | `α → [n]Char` | Convert to string |
+| Name | Alias | Signature | Description |
+|------|-------|-----------|-------------|
+| `toInt` | - | `α → I` | Convert to integer |
+| `toFloat` | - | `α → F64` | Convert to float |
+| `toBool` | - | `α → Bool` | Convert to boolean |
+| `toChar` | - | `I → Char` | Integer to character |
+| `toString` | `str` | `α → [n]Char` | Convert to string |
+| `strConcat` | `⧺` | `[n]Char → [m]Char → [k]Char` | Concatenate strings |
 
 ### IO
 
