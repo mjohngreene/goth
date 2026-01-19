@@ -31,6 +31,8 @@ pub struct LoweringContext {
     functions: Vec<Function>,
     /// Global function names and their types
     globals: std::collections::HashMap<String, Type>,
+    /// Global constant values (from top-level let bindings)
+    global_constants: std::collections::HashMap<String, (Constant, Type)>,
     /// Type information for locals (needed for de Bruijn lookup)
     pub local_types: std::collections::HashMap<LocalId, Type>,
     /// Pending entry block (set by if expressions)
@@ -48,6 +50,7 @@ impl LoweringContext {
             blocks: Vec::new(),
             functions: Vec::new(),
             globals: std::collections::HashMap::new(),
+            global_constants: std::collections::HashMap::new(),
             local_types: std::collections::HashMap::new(),
             pending_entry_block: None,
         }
@@ -192,6 +195,9 @@ pub fn lower_expr_to_operand(ctx: &mut LoweringContext, expr: &Expr) -> MirResul
                 // Return a marker type for now
                 let prim_ty = Type::Prim(goth_ast::types::PrimType::I64); // Placeholder
                 Ok((Operand::Const(Constant::Int(0)), prim_ty)) // Will be replaced at App
+            } else if let Some((constant, ty)) = ctx.global_constants.get(name.as_ref()) {
+                // It's a global constant - inline the value
+                Ok((Operand::Const(constant.clone()), ty.clone()))
             } else if let Some(ty) = ctx.globals.get(name.as_ref()) {
                 // It's a global function - create a reference
                 // For MIR, we don't have first-class function values yet
@@ -1293,15 +1299,35 @@ mod tests {
     }
 }
 
+/// Try to extract a constant from a simple literal expression
+fn try_extract_constant(expr: &Expr) -> Option<(Constant, Type)> {
+    match expr {
+        Expr::Lit(lit) => Some(lower_literal(lit)),
+        // Could add constant folding for simple binary operations later
+        _ => None,
+    }
+}
+
 /// Lower a module to a Program
 pub fn lower_module(module: &Module) -> MirResult<Program> {
     let mut ctx = LoweringContext::new();
     let mut lowered_fns = Vec::new();
 
-    // First pass: register all function signatures
+    // First pass: register all function signatures and global constants
     for decl in &module.decls {
-        if let Decl::Fn(fn_decl) = decl {
-            ctx.globals.insert(fn_decl.name.to_string(), fn_decl.signature.clone());
+        match decl {
+            Decl::Fn(fn_decl) => {
+                ctx.globals.insert(fn_decl.name.to_string(), fn_decl.signature.clone());
+            }
+            Decl::Let(let_decl) => {
+                // Try to extract constant value from the expression
+                if let Some((constant, ty)) = try_extract_constant(&let_decl.value) {
+                    // Use explicit type annotation if available
+                    let ty = let_decl.type_.clone().unwrap_or(ty);
+                    ctx.global_constants.insert(let_decl.name.to_string(), (constant, ty));
+                }
+            }
+            _ => {}
         }
     }
 
@@ -1312,6 +1338,7 @@ pub fn lower_module(module: &Module) -> MirResult<Program> {
                 // Create fresh context for this function
                 let mut fn_ctx = LoweringContext::new();
                 fn_ctx.globals = ctx.globals.clone();
+                fn_ctx.global_constants = ctx.global_constants.clone();
 
                 // Extract parameter types from signature
                 let mut param_types = Vec::new();
@@ -1356,7 +1383,7 @@ pub fn lower_module(module: &Module) -> MirResult<Program> {
                 lowered_fns.extend(fn_ctx.functions);
             }
             Decl::Let(_let_decl) => {
-                // TODO: Lower top-level let bindings as global constants
+                // Global constants are handled in the first pass
             }
             _ => {}
         }

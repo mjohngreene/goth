@@ -70,7 +70,7 @@
       "patterns": [
         {
           "name": "keyword.control.goth",
-          "match": "\\b(if|then|else|match|with|let|in|where|do|end|rec|fn)\\b"
+          "match": "\\b(if|then|else|match|with|let|in|where|do|end|rec|fn|use)\\b"
         },
         {
           "name": "keyword.declaration.goth",
@@ -83,6 +83,10 @@
         {
           "name": "constant.language.unit.goth",
           "match": "\\(\\)"
+        },
+        {
+          "name": "constant.language.math.goth",
+          "match": "[π𝕖]|\\b(pi|euler)\\b"
         }
       ]
     },
@@ -118,7 +122,7 @@
         },
         {
           "name": "keyword.operator.math.goth",
-          "match": "[Γ√]|gamma|sqrt|ln|exp|sin|cos|abs"
+          "match": "[Γ√]|\\b(gamma|sqrt|ln|exp|sin|cos|tan|asin|acos|atan|sinh|cosh|tanh|abs|sign|signum|round|log10|log2)\\b|log₁₀|log₂"
         },
         {
           "name": "keyword.operator.arithmetic.goth",
