@@ -1,67 +1,38 @@
 # Matrix Operations Demo
-# Demonstrates matrix operations using nested arrays and operators
+# Demonstrates matrix operations using APL-style operators
 # Usage: goth matmul.goth
 
-# Main: demonstrate matrix operations
 ╭─ main : () → ()
-╰─ # Define a 2x2 matrix
-   let m = [[1.0, 2.0],
-            [3.0, 4.0]] in
-
-   # Define a vector
-   let v = [5.0, 6.0] in
-
+╰─ let m = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]] in
+   let n = 3 in
+   let v = [1.0, 2.0, 3.0] in
    let _ = print "=== Matrix Operations Demo ===" in
    let _ = print "" in
-
-   # Display the matrix
-   let _ = print "Matrix M:" in
+   let _ = print "Matrix M (3x3):" in
    let _ = print m[0] in
    let _ = print m[1] in
+   let _ = print m[2] in
    let _ = print "" in
-
-   # Row and element access
-   let _ = print "Row access:" in
-   let _ = print ⟨"M[0] =", m[0]⟩ in
-   let _ = print ⟨"M[1] =", m[1]⟩ in
-   let _ = print ⟨"M[0][1] =", m[0][1]⟩ in
+   let diag = ι n ↦ λ→ m[₀][₀] in
+   let trace = Σ diag in
+   let _ = print "Diagonal: ι n ↦ λ→ m[i][i]" in
+   let _ = print ⟨"diag(M) =", diag⟩ in
+   let _ = print ⟨"trace(M) = Σ diag =", trace⟩ in
    let _ = print "" in
-
-   # Trace: sum of diagonal elements
-   let trace = m[0][0] + m[1][1] in
-   let _ = print ⟨"Trace(M) = M[0][0] + M[1][1] =", trace⟩ in
-   let _ = print "" in
-
-   # Determinant of 2x2: ad - bc
-   let det = m[0][0] × m[1][1] - m[0][1] × m[1][0] in
-   let _ = print ⟨"Det(M) = ad - bc =", det⟩ in
-   let _ = print "" in
-
-   # Matrix-vector product (manual): M × v
-   # [a b] × [x]   [ax + by]
-   # [c d]   [y] = [cx + dy]
-   let mv0 = Σ (m[0] × v) in
-   let mv1 = Σ (m[1] × v) in
-   let _ = print "Matrix-vector product M × v:" in
+   let mv = m ↦ λ→ Σ (₀ × v) in
+   let _ = print "Matrix-vector: M ↦ λ→ Σ(row × v)" in
    let _ = print ⟨"v =", v⟩ in
-   let _ = print ⟨"(M × v)[0] = Σ(M[0] × v) =", mv0⟩ in
-   let _ = print ⟨"(M × v)[1] = Σ(M[1] × v) =", mv1⟩ in
+   let _ = print ⟨"M × v =", mv⟩ in
    let _ = print "" in
-
-   # Element-wise operations
-   let _ = print "Element-wise operations:" in
-   let _ = print ⟨"M[0] + M[1] =", m[0] + m[1]⟩ in
-   let _ = print ⟨"M[0] × M[1] =", m[0] × m[1]⟩ in
-   let _ = print ⟨"2 × M[0] =", 2.0 × m[0]⟩ in
+   let rowsums = m ↦ λ→ Σ ₀ in
+   let _ = print "Row sums: M ↦ λ→ Σ row" in
+   let _ = print ⟨"Σ rows =", rowsums⟩ in
    let _ = print "" in
-
-   # Frobenius norm: sqrt of sum of squared elements
-   let frob = sqrt (Σ (m[0] × m[0]) + Σ (m[1] × m[1])) in
-   let _ = print ⟨"Frobenius norm =", frob⟩ in
+   let frob = sqrt (Σ (m ↦ λ→ Σ (₀ × ₀))) in
+   let _ = print "Frobenius: sqrt(Σ (M ↦ λ→ Σ(row × row)))" in
+   let _ = print ⟨"‖M‖_F =", frob⟩ in
    let _ = print "" in
-
-   # Dot product of rows
-   let row_dot = Σ (m[0] × m[1]) in
-   let _ = print ⟨"M[0] · M[1] = Σ(M[0] × M[1]) =", row_dot⟩ in
-
+   let antidiag = ι n ↦ λ→ m[₀][n - 1 - ₀] in
+   let _ = print "Anti-diagonal: ι n ↦ λ→ m[i][n-1-i]" in
+   let _ = print ⟨"antidiag(M) =", antidiag⟩ in
    print "Done!"
