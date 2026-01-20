@@ -24,6 +24,8 @@ cargo build --release
 
 ### Interpreter
 
+The interpreted version of the language is the canonical language.
+
 ```sh
 # REPL
 ./target/release/goth
@@ -36,6 +38,8 @@ cargo build --release
 ```
 
 ### Compiler
+
+The compiler is based on LLVM.  It is still somewhat experimental and may not support all language features.
 
 ```sh
 # Compile to native executable
