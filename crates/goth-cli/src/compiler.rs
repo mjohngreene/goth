@@ -476,4 +476,86 @@ int64_t* goth_filter_i64(int64_t* arr, fn_i64_bool pred, int64_t len) {
     }
     return result;
 }
+
+// ============ Matrix/Vector Operations (F64) ============
+
+#include <math.h>
+
+// Dot product: [n]F64 → [n]F64 → F64
+double goth_dot_f64(double* a, double* b, int64_t len) {
+    double sum = 0.0;
+    for (int64_t i = 0; i < len; i++) {
+        sum += a[i + 1] * b[i + 1];
+    }
+    return sum;
+}
+
+// Vector norm (Euclidean): [n]F64 → F64
+double goth_norm_f64(double* arr, int64_t len) {
+    double sum = 0.0;
+    for (int64_t i = 0; i < len; i++) {
+        double v = arr[i + 1];
+        sum += v * v;
+    }
+    return sqrt(sum);
+}
+
+// Matrix multiplication: [m n]F64 → [n p]F64 → [m p]F64
+// Matrices stored row-major: arr[0] = total_elements, then data
+// For [m n] matrix: index (i, j) = arr[1 + i*n + j]
+double* goth_matmul_f64(double* a, double* b, int64_t m, int64_t n, int64_t p) {
+    // Result is [m p] matrix
+    int64_t result_size = m * p;
+    double* result = (double*)malloc((result_size + 1) * sizeof(double));
+    int64_t* len_ptr = (int64_t*)result;
+    len_ptr[0] = result_size;
+
+    for (int64_t i = 0; i < m; i++) {
+        for (int64_t j = 0; j < p; j++) {
+            double sum = 0.0;
+            for (int64_t k = 0; k < n; k++) {
+                // a[i, k] * b[k, j]
+                sum += a[1 + i*n + k] * b[1 + k*p + j];
+            }
+            result[1 + i*p + j] = sum;
+        }
+    }
+    return result;
+}
+
+// Matrix transpose: [m n]F64 → [n m]F64
+double* goth_transpose_f64(double* arr, int64_t m, int64_t n) {
+    int64_t size = m * n;
+    double* result = (double*)malloc((size + 1) * sizeof(double));
+    int64_t* len_ptr = (int64_t*)result;
+    len_ptr[0] = size;
+
+    for (int64_t i = 0; i < m; i++) {
+        for (int64_t j = 0; j < n; j++) {
+            // Transpose: result[j, i] = arr[i, j]
+            result[1 + j*m + i] = arr[1 + i*n + j];
+        }
+    }
+    return result;
+}
+
+// Print f64 array (for debugging)
+void goth_print_array_f64(double* arr, int64_t len) {
+    printf("[");
+    for (int64_t i = 0; i < len; i++) {
+        if (i > 0) printf(", ");
+        printf("%g", arr[i + 1]);
+    }
+    printf("]");
+}
+
+// Print i64 array (for debugging)
+void goth_print_array_i64(int64_t* arr, int64_t len) {
+    printf("[");
+    for (int64_t i = 0; i < len; i++) {
+        if (i > 0) printf(", ");
+        printf("%ld", arr[i + 1]);
+    }
+    printf("]");
+}
 "#;
