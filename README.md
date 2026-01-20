@@ -1,6 +1,7 @@
-# 🦇 𝔊𝔬𝔱𝔥
+# 🦇 𝔤𝔬𝔱𝔥 🖤
+## the `goth` language for machine spirits
 
-A functional programming language with Unicode syntax, dependent types, and tensor operations.
+𝔤𝔬𝔱𝔥 is an LLM-friendly functional programming language with Unicode syntax, dependent types, and tensor operations.
 
 ## Quick Start
 
