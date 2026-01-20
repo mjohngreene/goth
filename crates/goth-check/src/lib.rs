@@ -46,9 +46,10 @@ impl TypeChecker {
         let mut ctx = Context::new();
         
         // Add built-in primitives
-        for prim in ["sqrt", "exp", "ln", "sin", "cos", "tan", 
+        for prim in ["sqrt", "exp", "ln", "sin", "cos", "tan",
                      "asin", "acos", "atan", "sinh", "cosh", "tanh",
-                     "floor", "ceil", "round", "abs", "length"] {
+                     "floor", "ceil", "round", "abs", "length",
+                     "dot", "·", "matmul", "transpose", "⍉", "norm"] {
             if let Some(ty) = builtins::primitive_type(prim) {
                 ctx.define_global(prim, ty);
             }
