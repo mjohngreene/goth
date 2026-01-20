@@ -933,12 +933,16 @@ fn emit_function(func: &Function, is_main: bool) -> Result<(String, Vec<(String,
         .params
         .iter()
         .enumerate()
-        .map(|(i, ty)| {
+        .filter_map(|(i, ty)| {
             let llvm_ty = emit_type(ty).unwrap_or_else(|_| "i64".to_string());
+            // Skip void parameters (unit type)
+            if llvm_ty == "void" {
+                return None;
+            }
             let param_ssa = format!("%arg{}", i);
             // Register parameter
             ctx.register_local(LocalId::new(i as u32), param_ssa.clone(), ty.clone());
-            format!("{} {}", llvm_ty, param_ssa)
+            Some(format!("{} {}", llvm_ty, param_ssa))
         })
         .collect();
 
@@ -1000,12 +1004,17 @@ fn emit_c_main(main_func: &Function) -> Result<String> {
     output.push_str("define i32 @main(i32 %argc, i8** %argv) {\n");
     output.push_str("entry:\n");
 
+    // Filter out void/unit parameters
+    let real_params: Vec<_> = main_func.params.iter()
+        .filter(|ty| emit_type(ty).map(|t| t != "void").unwrap_or(true))
+        .collect();
+
     // If goth main takes arguments, we need to parse them from argv
-    if main_func.params.is_empty() {
+    if real_params.is_empty() {
         // No arguments - just call
         output.push_str(&format!("  %result = call {} @goth_main()\n", ret_ty));
-    } else if main_func.params.len() == 1 {
-        let param_ty = &main_func.params[0];
+    } else if real_params.len() == 1 {
+        let param_ty = real_params[0];
         let llvm_ty = emit_type(param_ty)?;
         let is_float_param = matches!(param_ty, Type::Prim(PrimType::F64))
             || matches!(param_ty, Type::Var(n) if n.as_ref() == "F" || n.as_ref() == "Float");
@@ -1046,7 +1055,7 @@ fn emit_c_main(main_func: &Function) -> Result<String> {
         // Multiple arguments - parse each from argv
         let mut arg_calls = Vec::new();
 
-        for (i, param_ty) in main_func.params.iter().enumerate() {
+        for (i, param_ty) in real_params.iter().enumerate() {
             let llvm_ty = emit_type(param_ty)?;
             let is_float = matches!(param_ty, Type::Prim(PrimType::F64))
                 || matches!(param_ty, Type::Var(n) if n.as_ref() == "F" || n.as_ref() == "Float");

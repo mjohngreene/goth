@@ -344,4 +344,98 @@ int64_t goth_max_i64(int64_t* arr, int64_t len) {
     }
     return max;
 }
+
+// ============ String Operations ============
+
+// String length (C-string)
+int64_t goth_strlen(char* s) {
+    return (int64_t)strlen(s);
+}
+
+// String concatenation (allocates new string)
+char* goth_strconcat(char* a, char* b) {
+    size_t len_a = strlen(a);
+    size_t len_b = strlen(b);
+    char* result = (char*)malloc(len_a + len_b + 1);
+    strcpy(result, a);
+    strcat(result, b);
+    return result;
+}
+
+// Print string
+void goth_print_str(char* s) {
+    printf("%s", s);
+}
+
+// Print string with newline
+void goth_println_str(char* s) {
+    printf("%s\n", s);
+}
+
+// ============ File I/O ============
+
+// Read file contents as string (returns NULL on error)
+char* goth_read_file(char* path) {
+    FILE* f = fopen(path, "rb");
+    if (!f) return NULL;
+
+    fseek(f, 0, SEEK_END);
+    long size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    char* contents = (char*)malloc(size + 1);
+    if (!contents) {
+        fclose(f);
+        return NULL;
+    }
+
+    size_t read = fread(contents, 1, size, f);
+    contents[read] = '\0';
+    fclose(f);
+
+    return contents;
+}
+
+// Write string to file (returns 0 on success, -1 on error)
+int64_t goth_write_file(char* path, char* contents) {
+    FILE* f = fopen(path, "wb");
+    if (!f) return -1;
+
+    size_t len = strlen(contents);
+    size_t written = fwrite(contents, 1, len, f);
+    fclose(f);
+
+    return (written == len) ? 0 : -1;
+}
+
+// Read line from stdin (allocates new string)
+char* goth_read_line() {
+    char* line = NULL;
+    size_t len = 0;
+    ssize_t read = getline(&line, &len, stdin);
+
+    if (read == -1) {
+        free(line);
+        return strdup("");
+    }
+
+    // Remove trailing newline
+    if (read > 0 && line[read - 1] == '\n') {
+        line[read - 1] = '\0';
+    }
+
+    return line;
+}
+
+// ============ Memory Management ============
+
+// Free allocated memory
+void goth_free(void* ptr) {
+    free(ptr);
+}
+
+// Allocate memory
+void* goth_alloc(int64_t size) {
+    return malloc((size_t)size);
+}
 "#;
