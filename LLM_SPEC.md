@@ -16,20 +16,20 @@ If:           if cond then a else b
 ## De Bruijn Indices (Critical)
 
 Variables are numbered by binding depth, not named:
-- `₀` (or `_0`) = innermost/most recent binding
-- `₁` (or `_1`) = one level out
-- `₂` (or `_2`) = two levels out
+- `₀` (or `_0`) = first parameter / most recent binding
+- `₁` (or `_1`) = second parameter / one binding out
+- `₂` (or `_2`) = third parameter / two bindings out
 
 ```goth
-# Function args: first arg binds to higher index
-╭─ add : I64 → I64 → I64
-╰─ ₁ + ₀              # ₁ = first arg, ₀ = second arg
+# Function args: ₀ = first arg, ₁ = second arg
+╭─ sub : I64 → I64 → I64
+╰─ ₀ - ₁              # sub 10 3 = 7
 
 # Let shifts indices
 ╭─ example : I64 → I64
 ╰─ let x ← ₀ × 2 in   # ₀ = argument
-   let y ← ₁ + 1 in   # ₀ = x, ₁ = argument
-   ₀ + ₁              # ₀ = y, ₁ = x
+   let y ← ₀ + 1 in   # ₀ = x, ₁ = argument
+   ₀ + ₁              # ₀ = y, ₁ = x, ₂ = argument
 
 # Lambdas also shift
 [1, 2, 3] ↦ λ→ ₀ × 2  # Inside lambda: ₀ = array element
@@ -166,8 +166,9 @@ let b ← ₀ + 1 in    # ₀ = a (not ₁!)
 
 2. **Lambda index scope**: Inside `λ→`, ₀ is the lambda parameter
    ```goth
-   # WRONG: ₀ outside lambda is not ₀ inside
-   let x ← 5 in [1,2,3] ↦ λ→ ₀ + ₁    # ₀=elem, ₁=x (not argument)
+   # In this example:
+   let x ← 5 in [1,2,3] ↦ λ→ ₀ + ₁    # ₀=elem, ₁=x (not argument!)
+   # Argument would be ₂ inside the lambda
    ```
 
 3. **Type mismatch I vs I64**: Use `I64` in signatures
@@ -179,10 +180,10 @@ let b ← ₀ + 1 in    # ₀ = a (not ₁!)
    ╭─ main : () → I64
    ```
 
-4. **Comments**: Use `#` not `--`
+4. **Comments**: Use `#` for comments
    ```goth
-   # RIGHT: hash comment
-   -- WRONG: double dash doesn't work
+   # Line comment
+   x + y  # Inline comment
    ```
 
 ## ASCII Alternatives
@@ -207,6 +208,10 @@ let b ← ₀ + 1 in    # ₀ = a (not ₁!)
 | `₀` | `_0` |
 | `⊤` | `true` |
 | `⊥` | `false` |
+| `ι` | `iota` |
+| `⧺` | `++` |
+| `⍉` | `transpose` |
+| `·` | `dot` |
 
 ## Running Code
 

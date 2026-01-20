@@ -32,10 +32,10 @@
 | Tuple | `⟨1, "hi", true⟩` | Heterogeneous |
 | Record | `⟨x: 10, y: 20⟩` | Named fields |
 
-Comments use `--` or `#`:
+Comments use `#`:
 ```goth
--- This is a comment
-# So is this
+# This is a comment
+x + y  # Inline comment
 ```
 
 ---
@@ -46,27 +46,27 @@ Goth uses de Bruijn indices instead of named variables. This eliminates shadowin
 
 | Syntax | Meaning |
 |--------|---------|
-| `₀` or `_0` | Innermost binding |
-| `₁` or `_1` | One level out |
-| `₂` or `_2` | Two levels out |
+| `₀` or `_0` | First parameter / most recent binding |
+| `₁` or `_1` | Second parameter / one binding out |
+| `₂` or `_2` | Third parameter / two bindings out |
 
 ```goth
-λ→ ₀              -- identity: returns its argument
-λ→ λ→ ₁ + ₀      -- add: ₁ is first arg, ₀ is second
+λ→ ₀              # identity: returns its argument
+λ→ λ→ ₀ + ₁      # add: ₀ is second (inner) arg, ₁ is first (outer) arg
 ```
 
-In function declarations, arguments bind left-to-right:
+In function declarations, arguments bind in order (`₀` = first arg):
 ```goth
-╭─ add : I64 → I64 → I64
-╰─ ₀ + ₁            -- ₀ = first arg, ₁ = second arg
+╭─ sub : I64 → I64 → I64
+╰─ ₀ - ₁            # ₀ = first arg, ₁ = second arg (sub 10 3 = 7)
 ```
 
 Let bindings shift indices:
 ```goth
 ╭─ example : I64 → I64
-╰─ let x ← ₀ × 2 in    -- ₀ = argument
-   let y ← ₁ + 1 in    -- ₀ = x, ₁ = argument
-   ₀ + ₁               -- ₀ = y, ₁ = x
+╰─ let x ← ₀ × 2 in    # ₀ = argument
+   let y ← ₀ + 1 in    # ₀ = x, ₁ = argument
+   ₀ + ₁               # ₀ = y, ₁ = x, ₂ = argument
 ```
 
 ---
@@ -328,53 +328,64 @@ Each `.goth` file is a module. The module path corresponds to the file path:
 
 | Name | Signature | Description |
 |------|-----------|-------------|
-| `iota` | `I64 → [n]I64` | `[0, 1, ..., n-1]` |
+| `ι`, `iota` | `I64 → [n]I64` | `[0, 1, ..., n-1]` |
 | `range` | `I64 → I64 → [m]I64` | `[start, ..., end-1]` |
 
 ### Reductions
 
 | Name | Signature | Description |
 |------|-----------|-------------|
-| `sum`, `Σ` | `[n]I64 → I64` | Sum elements |
-| `prod`, `Π` | `[n]I64 → I64` | Product elements |
-| `min` | `[n]I64 → I64` | Minimum |
-| `max` | `[n]I64 → I64` | Maximum |
+| `Σ`, `sum` | `[n]α → α` | Sum elements |
+| `Π`, `prod` | `[n]α → α` | Product elements |
 | `length` | `[n]α → I64` | Array length |
 
 ### Transformations
 
 | Name | Signature | Description |
 |------|-----------|-------------|
-| `map`, `↦` | `[n]α → (α → β) → [n]β` | Apply to each |
-| `filter`, `▸` | `[n]α → (α → Bool) → [m]α` | Keep matching |
+| `↦` (map) | `[n]α → (α → β) → [n]β` | Apply to each |
+| `▸` (filter) | `[n]α → (α → Bool) → [m]α` | Keep matching |
 | `reverse` | `[n]α → [n]α` | Reverse order |
+| `take` | `I64 → [n]α → [m]α` | Take first k elements |
+| `drop` | `I64 → [n]α → [m]α` | Drop first k elements |
+| `⧺`, `++` | `[n]α → [m]α → [p]α` | Concatenate arrays |
 
 ### Linear Algebra
 
 | Name | Signature | Description |
 |------|-----------|-------------|
-| `dot`, `·` | `[n]F64 → [n]F64 → F64` | Dot product |
+| `·`, `dot` | `[n]F64 → [n]F64 → F64` | Dot product |
 | `norm` | `[n]F64 → F64` | Euclidean norm |
 | `matmul` | `[m n]F64 → [n p]F64 → [m p]F64` | Matrix multiply |
-| `transpose`, `⍉` | `[m n]α → [n m]α` | Transpose |
+| `⍉`, `transpose` | `[m n]α → [n m]α` | Transpose |
 
 ### Math Functions
 
 | Name | Signature |
 |------|-----------|
-| `sqrt`, `√` | `F64 → F64` |
+| `√`, `sqrt` | `F64 → F64` |
 | `exp` | `F64 → F64` |
 | `ln` | `F64 → F64` |
 | `sin`, `cos`, `tan` | `F64 → F64` |
 | `floor`, `ceil`, `round` | `F64 → F64` |
-| `abs` | `I64 → I64` |
+| `abs` | Numeric → Numeric |
+
+### Type Conversions
+
+| Name | Signature | Description |
+|------|-----------|-------------|
+| `toInt` | `α → I64` | Convert to integer |
+| `toFloat` | `α → F64` | Convert to float |
+| `toChar` | `I64 → Char` | Integer to character |
+| `parseInt` | `String → I64` | Parse string as integer |
+| `parseFloat` | `String → F64` | Parse string as float |
 
 ### I/O
 
 | Name | Signature | Description |
 |------|-----------|-------------|
 | `print` | `α → ()` | Print to stdout |
-| `read_line` | `() → String` | Read line from stdin |
+| `readLine` | `() → String` | Read line from stdin |
 
 ---
 
@@ -394,14 +405,14 @@ Each `.goth` file is a module. The module path corresponds to the file path:
 
 ```goth
 ╭─ main : () → I64
-╰─ Σ ((iota 10) ↦ (λ→ ₀ × ₀))
+╰─ Σ ((ι 10) ↦ λ→ ₀ × ₀)
 ```
 
 ### Filter Even Numbers
 
 ```goth
 ╭─ main : () → I64
-╰─ Σ ((iota 20) ▸ (λ→ (₀ % 2) == 0))
+╰─ Σ ((ι 20) ▸ λ→ (₀ % 2) = 0)
 ```
 
 ### Cross-Function Calls
