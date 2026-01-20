@@ -39,6 +39,8 @@ pub struct LoweringContext {
     pub local_types: std::collections::HashMap<LocalId, Type>,
     /// Pending entry block (set by if expressions)
     pending_entry_block: Option<Block>,
+    /// Entry block ID for the function (first block created)
+    entry_block_id: Option<BlockId>,
 }
 
 impl LoweringContext {
@@ -56,6 +58,7 @@ impl LoweringContext {
             enum_constructors: std::collections::HashMap::new(),
             local_types: std::collections::HashMap::new(),
             pending_entry_block: None,
+            entry_block_id: None,
         }
     }
     
@@ -312,7 +315,8 @@ pub fn lower_expr_to_operand(ctx: &mut LoweringContext, expr: &Expr) -> MirResul
             // Lower condition in current block
             let (cond_op, _cond_ty) = lower_expr_to_operand(ctx, cond)?;
 
-            // Create block IDs for branches and join point
+            // Create block IDs
+            let cond_block_id = ctx.fresh_block();
             let then_block_id = ctx.fresh_block();
             let else_block_id = ctx.fresh_block();
             let join_block_id = ctx.fresh_block();
@@ -320,7 +324,7 @@ pub fn lower_expr_to_operand(ctx: &mut LoweringContext, expr: &Expr) -> MirResul
             // Result variable (will be written in both branches)
             let result = ctx.fresh_local();
 
-            // Save current statements and create the conditional terminator
+            // Build the condition block from accumulated statements
             let current_stmts = ctx.take_stmts();
             let cond_block = Block {
                 stmts: current_stmts,
@@ -330,43 +334,93 @@ pub fn lower_expr_to_operand(ctx: &mut LoweringContext, expr: &Expr) -> MirResul
                     else_block: else_block_id,
                 },
             };
-            // Store the conditional block - it becomes the entry point
-            ctx.pending_entry_block = Some(cond_block);
+            ctx.add_block(cond_block_id, cond_block);
 
-            // Lower then branch
+            // Track the entry block (first condition block we create)
+            if ctx.entry_block_id.is_none() {
+                ctx.entry_block_id = Some(cond_block_id);
+            }
+
+            // === Lower THEN branch ===
+            let blocks_before_then = ctx.blocks.len();
             let (then_op, then_ty) = lower_expr_to_operand(ctx, then_)?;
             let then_stmts = ctx.take_stmts();
-            let mut then_block_stmts = then_stmts;
-            // Assign result
-            then_block_stmts.push(Stmt {
-                dest: result,
-                ty: then_ty.clone(),
-                rhs: Rhs::Use(then_op),
-            });
-            ctx.add_block(then_block_id, Block {
-                stmts: then_block_stmts,
-                term: Terminator::Goto(join_block_id),
-            });
+            let then_created_cf = ctx.blocks.len() > blocks_before_then;
 
-            // Lower else branch
+            if then_created_cf {
+                // Then branch has nested control flow - create trampoline
+                let nested_entry = ctx.blocks[blocks_before_then].0;
+                ctx.add_block(then_block_id, Block {
+                    stmts: then_stmts,
+                    term: Terminator::Goto(nested_entry),
+                });
+                // Patch all nested join blocks (Unreachable) to flow to our join
+                for i in blocks_before_then..ctx.blocks.len() {
+                    if matches!(ctx.blocks[i].1.term, Terminator::Unreachable) {
+                        ctx.blocks[i].1.stmts.push(Stmt {
+                            dest: result,
+                            ty: then_ty.clone(),
+                            rhs: Rhs::Use(then_op.clone()),
+                        });
+                        ctx.blocks[i].1.term = Terminator::Goto(join_block_id);
+                    }
+                }
+            } else {
+                // Simple then branch
+                let mut then_block_stmts = then_stmts;
+                then_block_stmts.push(Stmt {
+                    dest: result,
+                    ty: then_ty.clone(),
+                    rhs: Rhs::Use(then_op),
+                });
+                ctx.add_block(then_block_id, Block {
+                    stmts: then_block_stmts,
+                    term: Terminator::Goto(join_block_id),
+                });
+            }
+
+            // === Lower ELSE branch ===
+            let blocks_before_else = ctx.blocks.len();
             let (else_op, _else_ty) = lower_expr_to_operand(ctx, else_)?;
             let else_stmts = ctx.take_stmts();
-            let mut else_block_stmts = else_stmts;
-            // Assign result
-            else_block_stmts.push(Stmt {
-                dest: result,
-                ty: then_ty.clone(),
-                rhs: Rhs::Use(else_op),
-            });
-            ctx.add_block(else_block_id, Block {
-                stmts: else_block_stmts,
-                term: Terminator::Goto(join_block_id),
-            });
+            let else_created_cf = ctx.blocks.len() > blocks_before_else;
 
-            // Join block is empty, just continues
+            if else_created_cf {
+                // Else branch has nested control flow - create trampoline
+                let nested_entry = ctx.blocks[blocks_before_else].0;
+                ctx.add_block(else_block_id, Block {
+                    stmts: else_stmts,
+                    term: Terminator::Goto(nested_entry),
+                });
+                // Patch all nested join blocks (Unreachable) to flow to our join
+                for i in blocks_before_else..ctx.blocks.len() {
+                    if matches!(ctx.blocks[i].1.term, Terminator::Unreachable) {
+                        ctx.blocks[i].1.stmts.push(Stmt {
+                            dest: result,
+                            ty: then_ty.clone(),
+                            rhs: Rhs::Use(else_op.clone()),
+                        });
+                        ctx.blocks[i].1.term = Terminator::Goto(join_block_id);
+                    }
+                }
+            } else {
+                // Simple else branch
+                let mut else_block_stmts = else_stmts;
+                else_block_stmts.push(Stmt {
+                    dest: result,
+                    ty: then_ty.clone(),
+                    rhs: Rhs::Use(else_op),
+                });
+                ctx.add_block(else_block_id, Block {
+                    stmts: else_block_stmts,
+                    term: Terminator::Goto(join_block_id),
+                });
+            }
+
+            // Join block continues (terminator set by caller or at end)
             ctx.add_block(join_block_id, Block {
                 stmts: vec![],
-                term: Terminator::Unreachable, // Will be replaced by caller
+                term: Terminator::Unreachable, // Will be replaced by parent or final pass
             });
 
             // Register result type
@@ -1208,15 +1262,26 @@ pub fn lower_expr(expr: &Expr) -> MirResult<Program> {
 
     let (result_op, result_ty) = lower_expr_to_operand(&mut ctx, expr)?;
 
-    // Determine body block: use pending entry if set (for if expressions),
-    // otherwise create from accumulated statements
-    let body = if let Some(mut entry_block) = ctx.pending_entry_block.take() {
-        // The entry block came from an if expression
-        // We need to update the join block to return the result
-        // Find the join block (last added) and update its terminator
-        if let Some((_, join_block)) = ctx.blocks.last_mut() {
-            join_block.term = Terminator::Return(result_op);
+    // Determine body block
+    let body = if let Some(entry_id) = ctx.entry_block_id {
+        // Control flow was created - find and extract the entry block
+        let entry_idx = ctx.blocks.iter().position(|(id, _)| *id == entry_id)
+            .expect("entry block not found");
+        let (_, entry_block) = ctx.blocks.remove(entry_idx);
+
+        // Update ALL join blocks (those with Unreachable) to return the result
+        // The last join block (highest ID with Unreachable) gets the Return
+        // Others need to flow to it
+        let mut last_join_idx = None;
+        for (i, (_, block)) in ctx.blocks.iter().enumerate() {
+            if matches!(block.term, Terminator::Unreachable) {
+                last_join_idx = Some(i);
+            }
         }
+        if let Some(idx) = last_join_idx {
+            ctx.blocks[idx].1.term = Terminator::Return(result_op);
+        }
+
         entry_block
     } else {
         let stmts = ctx.take_stmts();
@@ -1658,19 +1723,37 @@ pub fn lower_module(module: &Module) -> MirResult<Program> {
                 }
                 let ret_ty = current_ty.clone();
 
-                // Push parameters onto local stack
-                for (i, ty) in param_types.iter().enumerate() {
-                    let local = fn_ctx.fresh_local();
-                    fn_ctx.push_local(local, ty.clone());
+                // Allocate locals for parameters (in order)
+                for _ in 0..param_types.len() {
+                    fn_ctx.fresh_local();
+                }
+                // Push onto local stack in REVERSE order so that:
+                // ₀ = first param (Goth convention, not standard de Bruijn)
+                // This is because lookup_index does: locals[len - 1 - idx]
+                for i in (0..param_types.len()).rev() {
+                    fn_ctx.push_local(LocalId::new(i as u32), param_types[i].clone());
                 }
 
                 // Lower body
                 let (body_op, _) = lower_expr_to_operand(&mut fn_ctx, &fn_decl.body)?;
 
-                let body = if let Some(entry_block) = fn_ctx.pending_entry_block.take() {
-                    if let Some((_, join_block)) = fn_ctx.blocks.last_mut() {
-                        join_block.term = Terminator::Return(body_op);
+                let body = if let Some(entry_id) = fn_ctx.entry_block_id {
+                    // Control flow exists - extract entry block
+                    let entry_idx = fn_ctx.blocks.iter().position(|(id, _)| *id == entry_id)
+                        .expect("entry block not found");
+                    let (_, entry_block) = fn_ctx.blocks.remove(entry_idx);
+
+                    // Update the last Unreachable block to Return
+                    let mut last_join_idx = None;
+                    for (i, (_, block)) in fn_ctx.blocks.iter().enumerate() {
+                        if matches!(block.term, Terminator::Unreachable) {
+                            last_join_idx = Some(i);
+                        }
                     }
+                    if let Some(idx) = last_join_idx {
+                        fn_ctx.blocks[idx].1.term = Terminator::Return(body_op);
+                    }
+
                     entry_block
                 } else {
                     Block {
