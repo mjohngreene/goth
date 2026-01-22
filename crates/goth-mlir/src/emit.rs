@@ -3,10 +3,21 @@
 //! Emits MLIR text format using standard dialects:
 //! - `func` dialect for functions
 //! - `arith` dialect for arithmetic operations
-//! - `scf` dialect for control flow
-//! - Custom handling for closures
+//! - `cf` dialect for unstructured control flow
+//! - `tensor` dialect for array operations
+//! - `goth` dialect for Goth-specific operations
+//!
+//! This module provides two implementations:
+//! 1. Legacy implementation (MlirContext) - used by existing code
+//! 2. New implementation (MlirBuilder) - uses the modular dialect approach
+//!
+//! The new implementation is available via `emit_program_v2` and will
+//! eventually replace the legacy implementation.
 
 use crate::error::{MlirError, Result};
+use crate::context::TextMlirContext;
+use crate::builder::MlirBuilder;
+use crate::types::type_to_mlir_string;
 use goth_ast::types::{Type, PrimType};
 use goth_mir::mir::*;
 use std::collections::HashMap;
@@ -600,19 +611,38 @@ pub fn emit_function(func: &Function) -> Result<String> {
 /// Emit program
 pub fn emit_program(program: &Program) -> Result<String> {
     let mut output = String::new();
-    
+
     // Module header
     output.push_str("module {\n");
-    
+
     // Emit all functions
     for func in &program.functions {
         output.push_str(&emit_function(func)?);
         output.push_str("\n");
     }
-    
+
     output.push_str("}\n");
-    
+
     Ok(output)
+}
+
+/// Emit program using the new builder infrastructure
+///
+/// This is the new implementation that uses the modular dialect approach.
+/// It will eventually replace `emit_program` once fully tested.
+pub fn emit_program_v2(program: &Program) -> Result<String> {
+    let mut ctx = TextMlirContext::new();
+    let mut builder = MlirBuilder::new(&mut ctx);
+    builder.emit_program(program)?;
+    Ok(ctx.into_output())
+}
+
+/// Emit a single function using the new builder infrastructure
+pub fn emit_function_v2(func: &Function) -> Result<String> {
+    let mut ctx = TextMlirContext::new();
+    let mut builder = MlirBuilder::new(&mut ctx);
+    builder.emit_function(func)?;
+    Ok(ctx.into_output())
 }
 
 #[cfg(test)]

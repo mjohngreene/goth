@@ -8,10 +8,17 @@
 //! MIR → MLIR dialects:
 //!   - func: Function definitions
 //!   - arith: Arithmetic operations
+//!   - cf: Unstructured control flow
 //!   - scf: Structured control flow
 //!   - tensor: Array operations
 //!   - math: Mathematical functions
+//!   - goth: Custom Goth dialect for domain-specific ops
 //! ```
+//!
+//! # Features
+//!
+//! - `melior`: Enable proper MLIR bindings via the melior crate (requires LLVM/MLIR)
+//! - `text-emit`: Use text-based MLIR generation (default, no external dependencies)
 //!
 //! # Example
 //!
@@ -27,7 +34,18 @@
 //! ```
 
 pub mod error;
+pub mod context;
+pub mod types;
+pub mod dialects;
+pub mod builder;
 pub mod emit;
 
+// Re-exports
 pub use error::{MlirError, Result};
+pub use context::TextMlirContext;
+pub use types::type_to_mlir_string;
+pub use builder::MlirBuilder;
 pub use emit::{emit_program, emit_function, emit_type};
+
+#[cfg(feature = "melior")]
+pub use context::GothMlirContext;
