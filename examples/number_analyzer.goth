@@ -1,0 +1,255 @@
+# Interactive Number Analyzer
+# A TUI example demonstrating user input and computation
+#
+# Run from examples/ directory: ../crates/target/release/goth number_analyzer.goth
+#
+# Enter a number to see:
+# - Prime/composite status
+# - Factors
+# - Even/odd
+# - Digit sum
+# - Number properties
+
+use "../stdlib/canvas.goth"
+
+# Check if d divides n (n is divisible by d)
+╭─ divides : I → I → Bool
+╰─ (₀ % ₁) = 0
+
+# Check if n is prime (simple trial division)
+╭─ isPrimeHelper : I → I → Bool
+╰─ let n = ₁ in
+   let d = ₁ in
+   if d × d > n then ⊤
+   else if divides d n then ⊥
+   else isPrimeHelper n (d + 1)
+
+╭─ isPrime : I → Bool
+╰─ if ₀ < 2 then ⊥
+   else isPrimeHelper ₀ 2
+
+# Count factors of n
+╭─ countFactorsHelper : I → I → I → I
+╰─ let n = ₂ in
+   let d = ₂ in
+   let acc = ₂ in
+   if d > n then acc
+   else if divides d n then countFactorsHelper n (d + 1) (acc + 1)
+   else countFactorsHelper n (d + 1) acc
+
+╭─ countFactors : I → I
+╰─ countFactorsHelper ₀ 1 0
+
+# Sum of factors of n
+╭─ sumFactorsHelper : I → I → I → I
+╰─ let n = ₂ in
+   let d = ₂ in
+   let acc = ₂ in
+   if d > n then acc
+   else if divides d n then sumFactorsHelper n (d + 1) (acc + d)
+   else sumFactorsHelper n (d + 1) acc
+
+╭─ sumFactors : I → I
+╰─ sumFactorsHelper ₀ 1 0
+
+# Format factors as string (iteratively build)
+╭─ formatFactorsHelper : I → I → String → String
+│  ◇io
+╰─ let n = ₂ in
+   let d = ₂ in
+   let acc = ₂ in
+   if d > n then acc
+   else if divides d n then
+     let newAcc = if strLen acc = 0
+                  then toString d
+                  else strConcat (strConcat acc ", ") (toString d)
+     in formatFactorsHelper n (d + 1) newAcc
+   else formatFactorsHelper n (d + 1) acc
+
+╭─ formatFactors : I → String
+│  ◇io
+╰─ formatFactorsHelper ₀ 1 ""
+
+# Sum of digits
+╭─ digitSumHelper : I → I → I
+╰─ let n = ₁ in
+   let acc = ₁ in
+   if n = 0 then acc
+   else digitSumHelper (n / 10) (acc + (n % 10))
+
+╭─ digitSum : I → I
+╰─ digitSumHelper (iabs ₀) 0
+
+# Check if perfect number (sum of proper divisors = n)
+╭─ properDivisorSum : I → I
+╰─ sumFactors ₀ - ₀
+
+╭─ isPerfect : I → Bool
+╰─ if ₀ < 2 then ⊥
+   else properDivisorSum ₀ = ₀
+
+# Check if square number
+╭─ isSquare : I → Bool
+╰─ let n = ₀ in
+   let root = ⌊√(toFloat n)⌋ in
+   root × root = n
+
+# Check if triangular number (n = k(k+1)/2 for some k)
+╭─ isTriangular : I → Bool
+╰─ let n = ₀ in
+   let test = 8 × n + 1 in
+   isSquare test
+
+# Analyze and display information about a number
+╭─ analyzeNumber : I → ()
+│  ◇io
+╰─ let n = ₀ in
+
+   # Clear screen and draw header
+   let _ = clear ⟨⟩ in
+   let _ = fgMagenta ⟨⟩ in
+   let _ = box2 1 1 50 3 in
+   let _ = resetStyle ⟨⟩ in
+   let _ = bold ⟨⟩ in
+   let _ = fgYellow ⟨⟩ in
+   let _ = printCentered 2 2 48 "Number Analyzer" in
+   let _ = resetStyle ⟨⟩ in
+
+   # Show the number
+   let _ = cursorTo 5 4 in
+   let _ = bold ⟨⟩ in
+   let _ = fgWhite ⟨⟩ in
+   let _ = print "Analyzing: " in
+   let _ = fgGreen ⟨⟩ in
+   let _ = print (toString n) in
+   let _ = resetStyle ⟨⟩ in
+
+   # Draw property box
+   let _ = fgBlue ⟨⟩ in
+   let _ = box 7 2 48 12 in
+   let _ = resetStyle ⟨⟩ in
+
+   # Type (Prime/Composite)
+   let _ = cursorTo 8 4 in
+   let _ = fgCyan ⟨⟩ in
+   let _ = print "Type:" in
+   let _ = cursorTo 8 22 in
+   let _ = resetStyle ⟨⟩ in
+   let _ = if isPrime n then
+             let _ = fgGreen ⟨⟩ in let _ = print "PRIME" in resetStyle ⟨⟩
+           else
+             let _ = fgYellow ⟨⟩ in let _ = print "Composite" in resetStyle ⟨⟩ in
+
+   # Parity
+   let _ = cursorTo 9 4 in
+   let _ = fgCyan ⟨⟩ in
+   let _ = print "Parity:" in
+   let _ = cursorTo 9 22 in
+   let _ = resetStyle ⟨⟩ in
+   let _ = if n % 2 = 0 then print "Even" else print "Odd" in
+
+   # Factors
+   let _ = cursorTo 10 4 in
+   let _ = fgCyan ⟨⟩ in
+   let _ = print "Factors:" in
+   let _ = cursorTo 10 22 in
+   let _ = resetStyle ⟨⟩ in
+   let _ = fgYellow ⟨⟩ in
+   let _ = print (formatFactors n) in
+   let _ = resetStyle ⟨⟩ in
+
+   # Number of factors
+   let numFacs = countFactors n in
+   let _ = cursorTo 11 4 in
+   let _ = fgCyan ⟨⟩ in
+   let _ = print "# of Factors:" in
+   let _ = cursorTo 11 22 in
+   let _ = resetStyle ⟨⟩ in
+   let _ = print (toString numFacs) in
+
+   # Sum of factors
+   let _ = cursorTo 12 4 in
+   let _ = fgCyan ⟨⟩ in
+   let _ = print "Factor Sum:" in
+   let _ = cursorTo 12 22 in
+   let _ = resetStyle ⟨⟩ in
+   let _ = print (toString (sumFactors n)) in
+
+   # Digit sum
+   let _ = cursorTo 13 4 in
+   let _ = fgCyan ⟨⟩ in
+   let _ = print "Digit Sum:" in
+   let _ = cursorTo 13 22 in
+   let _ = resetStyle ⟨⟩ in
+   let _ = print (toString (digitSum n)) in
+
+   # Perfect number
+   let _ = cursorTo 14 4 in
+   let _ = fgCyan ⟨⟩ in
+   let _ = print "Perfect Number:" in
+   let _ = cursorTo 14 22 in
+   let _ = if isPerfect n then
+             let _ = fgGreen ⟨⟩ in let _ = print "Yes" in resetStyle ⟨⟩
+           else
+             let _ = fgRed ⟨⟩ in let _ = print "No" in resetStyle ⟨⟩ in
+
+   # Square number
+   let _ = cursorTo 15 4 in
+   let _ = fgCyan ⟨⟩ in
+   let _ = print "Square Number:" in
+   let _ = cursorTo 15 22 in
+   let _ = if isSquare n then
+             let _ = fgGreen ⟨⟩ in let _ = print "Yes" in resetStyle ⟨⟩
+           else
+             let _ = fgRed ⟨⟩ in let _ = print "No" in resetStyle ⟨⟩ in
+
+   # Triangular number
+   let _ = cursorTo 16 4 in
+   let _ = fgCyan ⟨⟩ in
+   let _ = print "Triangular:" in
+   let _ = cursorTo 16 22 in
+   let _ = if isTriangular n then
+             let _ = fgGreen ⟨⟩ in let _ = print "Yes" in resetStyle ⟨⟩
+           else
+             let _ = fgRed ⟨⟩ in let _ = print "No" in resetStyle ⟨⟩ in
+
+   # Visual representation - factor count bar
+   let _ = cursorTo 20 2 in
+   let _ = fgCyan ⟨⟩ in
+   let _ = print "Factor count bar:" in
+   let _ = resetStyle ⟨⟩ in
+   let barLen = if numFacs > 40 then 40 else numFacs in
+   let _ = progressBar 21 2 40 (toFloat barLen / 40.0) in
+
+   # Move cursor to bottom
+   cursorTo 23 1
+
+# Main input loop
+╭─ main : () → ()
+│  ◇io
+╰─ let _ = clear ⟨⟩ in
+   let _ = fgMagenta ⟨⟩ in
+   let _ = box2 1 1 50 3 in
+   let _ = resetStyle ⟨⟩ in
+   let _ = bold ⟨⟩ in
+   let _ = fgYellow ⟨⟩ in
+   let _ = printCentered 2 2 48 "Number Analyzer" in
+   let _ = resetStyle ⟨⟩ in
+
+   let _ = cursorTo 5 2 in
+   let _ = print "Enter a positive integer to analyze:" in
+   let _ = cursorTo 6 2 in
+   let _ = fgGreen ⟨⟩ in
+   let _ = print "> " in
+   let _ = resetStyle ⟨⟩ in
+
+   let input = readLine ⟨⟩ in
+   let n = parseInt input in
+
+   if n < 1 then
+     let _ = cursorTo 8 2 in
+     let _ = fgRed ⟨⟩ in
+     let _ = print "Please enter a positive integer!" in
+     resetStyle ⟨⟩
+   else
+     analyzeNumber n
