@@ -520,6 +520,7 @@ name = "goth-eval"
 version = "0.1.0"
 dependencies = [
  "goth-ast",
+ "libc",
  "ordered-float",
  "pretty_assertions",
  "thiserror",

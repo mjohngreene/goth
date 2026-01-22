@@ -45,8 +45,13 @@ impl Evaluator {
             ("dot", PrimFn::Dot), ("·", PrimFn::Dot),  // middle dot
             ("norm", PrimFn::Norm), ("matmul", PrimFn::MatMul),
             ("print", PrimFn::Print), ("println", PrimFn::Print),
+            ("write", PrimFn::Write),  // Print without newline (for TUI)
+            ("flush", PrimFn::Flush),  // Flush stdout
             ("readLine", PrimFn::ReadLine), ("read_line", PrimFn::ReadLine),
+            ("readKey", PrimFn::ReadKey), ("read_key", PrimFn::ReadKey),  // Read single key
             ("readFile", PrimFn::ReadFile), ("writeFile", PrimFn::WriteFile),
+            ("rawModeEnter", PrimFn::RawModeEnter), ("rawModeExit", PrimFn::RawModeExit),  // Terminal raw mode
+            ("sleep", PrimFn::Sleep),  // Sleep for milliseconds
             ("toInt", PrimFn::ToInt), ("toFloat", PrimFn::ToFloat), ("toBool", PrimFn::ToBool), ("toChar", PrimFn::ToChar),
             ("parseInt", PrimFn::ParseInt), ("parseFloat", PrimFn::ParseFloat),
             ("toString", PrimFn::ToString), ("str", PrimFn::ToString),
@@ -382,7 +387,8 @@ impl Default for Evaluator { fn default() -> Self { Self::new() } }
 fn prim_arity(prim: PrimFn) -> usize {
     match prim {
         PrimFn::Neg | PrimFn::Abs | PrimFn::Not | PrimFn::Exp | PrimFn::Ln | PrimFn::Sqrt | PrimFn::Sin | PrimFn::Cos | PrimFn::Tan | PrimFn::Floor | PrimFn::Ceil | PrimFn::Round | PrimFn::Sum | PrimFn::Prod | PrimFn::Len | PrimFn::Shape | PrimFn::Reverse | PrimFn::Transpose | PrimFn::Norm | PrimFn::ToInt | PrimFn::ToFloat | PrimFn::ToBool | PrimFn::ToChar | PrimFn::ParseInt | PrimFn::ParseFloat | PrimFn::Iota | PrimFn::ToString | PrimFn::Chars => 1,
-        PrimFn::Print | PrimFn::ReadLine | PrimFn::ReadFile => 1,  // ReadLine takes unit, ReadFile takes path
+        PrimFn::Print | PrimFn::Write | PrimFn::ReadLine | PrimFn::ReadKey | PrimFn::ReadFile | PrimFn::Sleep => 1,
+        PrimFn::Flush | PrimFn::RawModeEnter | PrimFn::RawModeExit => 1,  // Terminal control (take unit)
         PrimFn::Lines | PrimFn::Words | PrimFn::Bytes => 1,  // String splitting (unary)
         PrimFn::WriteFile => 2,  // WriteFile takes path and content
         PrimFn::StrEq | PrimFn::StartsWith | PrimFn::EndsWith | PrimFn::Contains => 2,  // String comparison (binary)

@@ -1,0 +1,32 @@
+# Simple TUI test - verifies write doesn't add newlines
+# and basic ANSI sequences work correctly
+
+use "../stdlib/tui.goth"
+
+╭─ main : () → ()
+│  ◇io
+╰─ # Test 1: write shouldn't add newlines
+   let _ = print "Test 1: write should output ABC on same line:" in
+   let _ = write "A" in
+   let _ = write "B" in
+   let _ = write "C" in
+   let _ = write "\n" in
+
+   # Test 2: colors
+   let _ = print "Test 2: colors:" in
+   let _ = fgRed ⟨⟩ in
+   let _ = write "Red " in
+   let _ = fgGreen ⟨⟩ in
+   let _ = write "Green " in
+   let _ = fgBlue ⟨⟩ in
+   let _ = write "Blue" in
+   let _ = resetStyle ⟨⟩ in
+   let _ = write "\n" in
+
+   # Test 3: cursor positioning (brief)
+   let _ = print "Test 3: cursor positioning should work" in
+   let _ = cursorSave ⟨⟩ in
+   let _ = write "Before " in
+   let _ = write "After" in
+   let _ = cursorRestore ⟨⟩ in
+   write "\n"

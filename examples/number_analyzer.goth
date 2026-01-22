@@ -1,16 +1,23 @@
 # Interactive Number Analyzer
-# A TUI example demonstrating user input and computation
+# A TUI example demonstrating a proper event loop with in-place updates
 #
 # Run from examples/ directory: ../crates/target/release/goth number_analyzer.goth
 #
-# Enter a number to see:
-# - Prime/composite status
-# - Factors
-# - Even/odd
-# - Digit sum
-# - Number properties
+# Controls:
+# - Type digits (0-9) to build a number
+# - Backspace to delete last digit
+# - Enter to analyze current number
+# - 'c' to clear and start over
+# - 'q' to quit
+#
+# Features:
+# - Live display updates in-place
+# - No terminal scrolling
+# - Clean exit that restores terminal state
 
 use "../stdlib/canvas.goth"
+
+# ============ Math Functions ============
 
 # Check if d divides n (n is divisible by d)
 ╭─ divides : I → I → Bool
@@ -100,29 +107,69 @@ use "../stdlib/canvas.goth"
    let test = 8 × n + 1 in
    isSquare test
 
-# Analyze and display information about a number
-╭─ analyzeNumber : I → ()
-│  ◇io
-╰─ let n = ₀ in
+# ============ UI Rendering ============
 
-   # Clear screen and draw header
-   let _ = clear ⟨⟩ in
-   let _ = fgMagenta ⟨⟩ in
+# Draw the header
+╭─ drawHeader : () → ()
+│  ◇io
+╰─ let _ = fgMagenta ⟨⟩ in
    let _ = box2 1 1 50 3 in
    let _ = resetStyle ⟨⟩ in
    let _ = bold ⟨⟩ in
    let _ = fgYellow ⟨⟩ in
    let _ = printCentered 2 2 48 "Number Analyzer" in
-   let _ = resetStyle ⟨⟩ in
+   resetStyle ⟨⟩
 
-   # Show the number
-   let _ = cursorTo 5 4 in
-   let _ = bold ⟨⟩ in
-   let _ = fgWhite ⟨⟩ in
-   let _ = print "Analyzing: " in
+# Draw input area
+╭─ drawInput : String → ()
+│  ◇io
+╰─ let input = ₀ in
+   let _ = cursorTo 5 2 in
+   let _ = clearLine ⟨⟩ in
+   let _ = write "Enter number: " in
    let _ = fgGreen ⟨⟩ in
-   let _ = print (toString n) in
+   let _ = write input in
+   let _ = fgWhite ⟨⟩ in
+   write "_"
+
+# Draw a property row with label and value
+╭─ drawProp : I → String → String → ()
+│  ◇io
+╰─ let row = ₂ in
+   let label = ₂ in
+   let value = ₂ in
+   let _ = cursorTo row 4 in
+   let _ = clearLine ⟨⟩ in
+   let _ = fgCyan ⟨⟩ in
+   let _ = write label in
+   let _ = cursorTo row 22 in
    let _ = resetStyle ⟨⟩ in
+   write value
+
+# Draw a boolean property with colored Yes/No
+╭─ drawBoolProp : I → String → Bool → ()
+│  ◇io
+╰─ let row = ₂ in
+   let label = ₂ in
+   let value = ₂ in
+   let _ = cursorTo row 4 in
+   let _ = clearLine ⟨⟩ in
+   let _ = fgCyan ⟨⟩ in
+   let _ = write label in
+   let _ = cursorTo row 22 in
+   if value then
+     let _ = fgGreen ⟨⟩ in
+     let _ = write "Yes" in
+     resetStyle ⟨⟩
+   else
+     let _ = fgRed ⟨⟩ in
+     let _ = write "No" in
+     resetStyle ⟨⟩
+
+# Analyze and display information about a number
+╭─ analyzeNumber : I → ()
+│  ◇io
+╰─ let n = ₀ in
 
    # Draw property box
    let _ = fgBlue ⟨⟩ in
@@ -131,125 +178,147 @@ use "../stdlib/canvas.goth"
 
    # Type (Prime/Composite)
    let _ = cursorTo 8 4 in
+   let _ = clearLine ⟨⟩ in
    let _ = fgCyan ⟨⟩ in
-   let _ = print "Type:" in
+   let _ = write "Type:" in
    let _ = cursorTo 8 22 in
    let _ = resetStyle ⟨⟩ in
    let _ = if isPrime n then
-             let _ = fgGreen ⟨⟩ in let _ = print "PRIME" in resetStyle ⟨⟩
+             let _ = fgGreen ⟨⟩ in let _ = write "PRIME" in resetStyle ⟨⟩
            else
-             let _ = fgYellow ⟨⟩ in let _ = print "Composite" in resetStyle ⟨⟩ in
+             let _ = fgYellow ⟨⟩ in let _ = write "Composite" in resetStyle ⟨⟩ in
 
    # Parity
-   let _ = cursorTo 9 4 in
-   let _ = fgCyan ⟨⟩ in
-   let _ = print "Parity:" in
-   let _ = cursorTo 9 22 in
-   let _ = resetStyle ⟨⟩ in
-   let _ = if n % 2 = 0 then print "Even" else print "Odd" in
+   let _ = drawProp 9 "Parity:" (if n % 2 = 0 then "Even" else "Odd") in
 
-   # Factors
+   # Factors (truncate if too long)
+   let factors = formatFactors n in
+   let displayFactors = if strLen factors > 24 then strConcat (take 21 factors) "..." else factors in
    let _ = cursorTo 10 4 in
+   let _ = clearLine ⟨⟩ in
    let _ = fgCyan ⟨⟩ in
-   let _ = print "Factors:" in
+   let _ = write "Factors:" in
    let _ = cursorTo 10 22 in
-   let _ = resetStyle ⟨⟩ in
    let _ = fgYellow ⟨⟩ in
-   let _ = print (formatFactors n) in
+   let _ = write displayFactors in
    let _ = resetStyle ⟨⟩ in
 
    # Number of factors
    let numFacs = countFactors n in
-   let _ = cursorTo 11 4 in
-   let _ = fgCyan ⟨⟩ in
-   let _ = print "# of Factors:" in
-   let _ = cursorTo 11 22 in
-   let _ = resetStyle ⟨⟩ in
-   let _ = print (toString numFacs) in
+   let _ = drawProp 11 "# of Factors:" (toString numFacs) in
 
    # Sum of factors
-   let _ = cursorTo 12 4 in
-   let _ = fgCyan ⟨⟩ in
-   let _ = print "Factor Sum:" in
-   let _ = cursorTo 12 22 in
-   let _ = resetStyle ⟨⟩ in
-   let _ = print (toString (sumFactors n)) in
+   let _ = drawProp 12 "Factor Sum:" (toString (sumFactors n)) in
 
    # Digit sum
-   let _ = cursorTo 13 4 in
-   let _ = fgCyan ⟨⟩ in
-   let _ = print "Digit Sum:" in
-   let _ = cursorTo 13 22 in
-   let _ = resetStyle ⟨⟩ in
-   let _ = print (toString (digitSum n)) in
+   let _ = drawProp 13 "Digit Sum:" (toString (digitSum n)) in
 
    # Perfect number
-   let _ = cursorTo 14 4 in
-   let _ = fgCyan ⟨⟩ in
-   let _ = print "Perfect Number:" in
-   let _ = cursorTo 14 22 in
-   let _ = if isPerfect n then
-             let _ = fgGreen ⟨⟩ in let _ = print "Yes" in resetStyle ⟨⟩
-           else
-             let _ = fgRed ⟨⟩ in let _ = print "No" in resetStyle ⟨⟩ in
+   let _ = drawBoolProp 14 "Perfect Number:" (isPerfect n) in
 
    # Square number
-   let _ = cursorTo 15 4 in
-   let _ = fgCyan ⟨⟩ in
-   let _ = print "Square Number:" in
-   let _ = cursorTo 15 22 in
-   let _ = if isSquare n then
-             let _ = fgGreen ⟨⟩ in let _ = print "Yes" in resetStyle ⟨⟩
-           else
-             let _ = fgRed ⟨⟩ in let _ = print "No" in resetStyle ⟨⟩ in
+   let _ = drawBoolProp 15 "Square Number:" (isSquare n) in
 
    # Triangular number
-   let _ = cursorTo 16 4 in
-   let _ = fgCyan ⟨⟩ in
-   let _ = print "Triangular:" in
-   let _ = cursorTo 16 22 in
-   let _ = if isTriangular n then
-             let _ = fgGreen ⟨⟩ in let _ = print "Yes" in resetStyle ⟨⟩
-           else
-             let _ = fgRed ⟨⟩ in let _ = print "No" in resetStyle ⟨⟩ in
+   let _ = drawBoolProp 16 "Triangular:" (isTriangular n) in
 
    # Visual representation - factor count bar
    let _ = cursorTo 20 2 in
    let _ = fgCyan ⟨⟩ in
-   let _ = print "Factor count bar:" in
+   let _ = write "Factor count bar:" in
    let _ = resetStyle ⟨⟩ in
    let barLen = if numFacs > 40 then 40 else numFacs in
-   let _ = progressBar 21 2 40 (toFloat barLen / 40.0) in
+   progressBar 21 2 40 (toFloat barLen / 40.0)
 
-   # Move cursor to bottom
-   cursorTo 23 1
+# Draw help text at bottom
+╭─ drawHelp : () → ()
+│  ◇io
+╰─ let _ = cursorTo 23 2 in
+   let _ = dim ⟨⟩ in
+   let _ = write "[0-9] add digit  [Backspace] delete  [Enter] analyze  [c] clear  [q] quit" in
+   resetStyle ⟨⟩
 
-# Main input loop
+# Helper to clear rows from r to 22
+╭─ clearRowsFrom : I → ()
+│  ◇io
+╰─ let r = ₀ in
+   if r > 22 then ⟨⟩
+   else
+     let _ = cursorTo r 1 in
+     let _ = clearLine ⟨⟩ in
+     clearRowsFrom (r + 1)
+
+# Clear the analysis area
+╭─ clearAnalysis : () → ()
+│  ◇io
+╰─ clearRowsFrom 7
+
+# ============ State and Event Loop ============
+
+# Convert string of digits to integer
+╭─ parseDigits : String → I
+╰─ if strLen ₀ = 0 then 0
+   else parseInt ₀
+
+# Main render function
+╭─ render : String → ()
+│  ◇io
+╰─ let input = ₀ in
+   let _ = drawHeader ⟨⟩ in
+   let _ = drawInput input in
+   drawHelp ⟨⟩
+
+# Check if key is quit (q)
+╭─ isQuitKey : I → Bool
+╰─ ₀ = 113
+
+# Process key and return new input, or empty string on quit
+╭─ processKey : I → String → String
+│  ◇io
+╰─ let key = ₁ in
+   let input = ₁ in
+
+   # c = clear
+   if key = 99 then
+     let _ = clearAnalysis ⟨⟩ in
+     ""
+
+   # Enter = analyze (keep same input)
+   else if key = 13 then
+     let n = parseDigits input in
+     let _ = if n > 0 then analyzeNumber n else ⟨⟩ in
+     input
+
+   # Backspace = delete last character
+   else if key = 127 then
+     let newLen = strLen input - 1 in
+     let newInput = if newLen < 0 then "" else take newLen input in
+     let _ = clearAnalysis ⟨⟩ in
+     newInput
+
+   # 0-9 = add digit
+   else if key >= 48 ∧ key <= 57 then
+     let digit = toChar key in
+     strConcat input (toString digit)
+
+   # Ignore other keys - keep same input
+   else input
+
+# Main event loop
+╭─ eventLoop : String → ()
+│  ◇io
+╰─ let input = ₀ in
+   let _ = render input in
+   let key = getKey ⟨⟩ in
+   if isQuitKey key then ⟨⟩
+   else
+     let newInput = processKey key input in
+     eventLoop newInput
+
+# Main entry point
 ╭─ main : () → ()
 │  ◇io
-╰─ let _ = clear ⟨⟩ in
-   let _ = fgMagenta ⟨⟩ in
-   let _ = box2 1 1 50 3 in
-   let _ = resetStyle ⟨⟩ in
-   let _ = bold ⟨⟩ in
-   let _ = fgYellow ⟨⟩ in
-   let _ = printCentered 2 2 48 "Number Analyzer" in
-   let _ = resetStyle ⟨⟩ in
-
-   let _ = cursorTo 5 2 in
-   let _ = print "Enter a positive integer to analyze:" in
-   let _ = cursorTo 6 2 in
-   let _ = fgGreen ⟨⟩ in
-   let _ = print "> " in
-   let _ = resetStyle ⟨⟩ in
-
-   let input = readLine ⟨⟩ in
-   let n = parseInt input in
-
-   if n < 1 then
-     let _ = cursorTo 8 2 in
-     let _ = fgRed ⟨⟩ in
-     let _ = print "Please enter a positive integer!" in
-     resetStyle ⟨⟩
-   else
-     analyzeNumber n
+╰─ let _ = tuiEnter ⟨⟩ in
+   let _ = clear ⟨⟩ in
+   let _ = eventLoop "" in
+   tuiExit ⟨⟩

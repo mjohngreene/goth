@@ -22,7 +22,7 @@ use "tui.goth"
 │  ◇io
 ╰─ let _ = cursorTo ₃ ₂ in      # After: ₀=_, ₁=color, ₂=len, ₃=col, ₄=row
    let _ = bg256 ₁ in           # After: ₀=_, ₁=_, ₂=color, ₃=len, ₄=col, ₅=row
-   let _ = print (joinStrings (replicate ₃ " ")) in
+   let _ = write (joinStrings (replicate ₃ " ")) in
    resetStyle ⟨⟩
 
 # ============ Box Drawing ============
@@ -121,12 +121,12 @@ use "tui.goth"
    let filled = floor (progress × (toFloat w)) in
    let empty = w - filled in
    let _ = cursorTo row col in
-   let _ = print "[" in
+   let _ = write "[" in
    let _ = fgGreen ⟨⟩ in
-   let _ = print (joinStrings (replicate (toInt filled) "█")) in
+   let _ = write (joinStrings (replicate (toInt filled) "█")) in
    let _ = resetStyle ⟨⟩ in
-   let _ = print (joinStrings (replicate (toInt empty) "░")) in
-   print "]"
+   let _ = write (joinStrings (replicate (toInt empty) "░")) in
+   write "]"
 
 # ============ Bresenham Line Drawing ============
 
@@ -240,28 +240,12 @@ use "tui.goth"
 
 # ============ Animation Helpers ============
 
-# Pause for visual effect (prints nothing, just delays via output)
-# Note: This is a workaround - real delays need runtime support
-╭─ flush : () → ()
-│  ◇io
-╰─ print ""
-
-# Set up alternate screen buffer (preserves main terminal)
-╭─ enterAltScreen : () → ()
-│  ◇io
-╰─ print "\x1b[?1049h"
-
-# Exit alternate screen buffer (restore main terminal)
-╭─ exitAltScreen : () → ()
-│  ◇io
-╰─ print "\x1b[?1049l"
-
 # Enable mouse tracking (basic mode)
 ╭─ enableMouse : () → ()
 │  ◇io
-╰─ print "\x1b[?1000h"
+╰─ write "\x1b[?1000h"
 
 # Disable mouse tracking
 ╭─ disableMouse : () → ()
 │  ◇io
-╰─ print "\x1b[?1000l"
+╰─ write "\x1b[?1000l"

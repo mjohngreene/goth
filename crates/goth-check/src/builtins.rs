@@ -642,6 +642,34 @@ pub fn primitive_type(name: &str) -> Option<Type> {
                 Type::unit(),
             ))
         }
+        // TUI primitives
+        "write" => {
+            // ∀α. α → Unit (write without newline)
+            Some(Type::Forall(
+                vec![TypeParam { name: "α".into(), kind: TypeParamKind::Type }],
+                Box::new(Type::func(Type::Var("α".into()), Type::unit())),
+            ))
+        }
+        "flush" => {
+            // Unit → Unit (flush stdout)
+            Some(Type::func(Type::unit(), Type::unit()))
+        }
+        "readKey" => {
+            // Unit → Int (read single key code)
+            Some(Type::func(Type::unit(), Type::Prim(PrimType::Int)))
+        }
+        "rawModeEnter" => {
+            // Unit → Unit (enter raw terminal mode)
+            Some(Type::func(Type::unit(), Type::unit()))
+        }
+        "rawModeExit" => {
+            // Unit → Unit (exit raw terminal mode)
+            Some(Type::func(Type::unit(), Type::unit()))
+        }
+        "sleep" => {
+            // Int → Unit (sleep for milliseconds)
+            Some(Type::func(Type::Prim(PrimType::Int), Type::unit()))
+        }
         // String splitting (for wc-like operations)
         "lines" => {
             // String → [m]String (split by newlines)
