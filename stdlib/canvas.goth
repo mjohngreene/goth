@@ -16,26 +16,26 @@ use "tui.goth"
 # ============ Line Drawing ============
 
 # Draw a filled horizontal bar with color
+# Args: row, col, len, color
+# Initial: ₀=color, ₁=len, ₂=col, ₃=row
 ╭─ hbar : I → I → I → I → ()
 │  ◇io
-╰─ let row = ₃ in
-   let col = ₂ in
-   let len = ₁ in
-   let color = ₀ in
-   let _ = cursorTo row col in
-   let _ = bg256 color in
-   let _ = print (joinStrings (replicate len " ")) in
+╰─ let _ = cursorTo ₃ ₂ in      # After: ₀=_, ₁=color, ₂=len, ₃=col, ₄=row
+   let _ = bg256 ₁ in           # After: ₀=_, ₁=_, ₂=color, ₃=len, ₄=col, ₅=row
+   let _ = print (joinStrings (replicate ₃ " ")) in
    resetStyle ⟨⟩
 
 # ============ Box Drawing ============
 
 # Draw a box outline (row, col, width, height)
+# Each `let` shifts indices by 1, so we always capture from ₃
+# Initial: ₀=h, ₁=w, ₂=col, ₃=row
 ╭─ box : I → I → I → I → ()
 │  ◇io
-╰─ let row = ₃ in
-   let col = ₂ in
-   let w = ₁ in
-   let h = ₀ in
+╰─ let row = ₃ in   # row captured; now ₀=row, ₁=h, ₂=w, ₃=col, ₄=row_orig
+   let col = ₃ in   # col captured; now ₀=col, ₁=row, ₂=h, ₃=w, ...
+   let w = ₃ in     # w captured; now ₀=w, ₁=col, ₂=row, ₃=h, ...
+   let h = ₃ in     # h captured; now ₀=h, ₁=w, ₂=col, ₃=row
    # Top edge
    let _ = printAt row col boxTopLeft in
    let _ = hline row (col + 1) (w - 2) boxHorizontal in
@@ -50,12 +50,13 @@ use "tui.goth"
    vline (row + 1) (col + w - 1) (h - 2) boxVertical
 
 # Draw a double-line box outline (row, col, width, height)
+# Each `let` shifts indices by 1, so we always capture from ₃
 ╭─ box2 : I → I → I → I → ()
 │  ◇io
 ╰─ let row = ₃ in
-   let col = ₂ in
-   let w = ₁ in
-   let h = ₀ in
+   let col = ₃ in
+   let w = ₃ in
+   let h = ₃ in
    # Top edge
    let _ = printAt row col boxTopLeft2 in
    let _ = hline row (col + 1) (w - 2) boxHorizontal2 in
@@ -70,13 +71,14 @@ use "tui.goth"
    vline (row + 1) (col + w - 1) (h - 2) boxVertical2
 
 # Draw a filled rectangle (row, col, width, height, char)
+# 5 args: always capture from ₄ as indices shift
 ╭─ fillRect : I → I → I → I → String → ()
 │  ◇io
 ╰─ let row = ₄ in
-   let col = ₃ in
-   let w = ₂ in
-   let h = ₁ in
-   let ch = ₀ in
+   let col = ₄ in
+   let w = ₄ in
+   let h = ₄ in
+   let ch = ₄ in
    if h = 0 then ⟨⟩
    else let _ = hline row col w ch in
         fillRect (row + 1) col w (h - 1) ch
@@ -84,35 +86,38 @@ use "tui.goth"
 # ============ Text Rendering ============
 
 # Print centered text in a box (row, col, width, text)
+# 4 args: always capture from ₃ as indices shift
 ╭─ printCentered : I → I → I → String → ()
 │  ◇io
 ╰─ let row = ₃ in
-   let col = ₂ in
-   let w = ₁ in
-   let text = ₀ in
+   let col = ₃ in
+   let w = ₃ in
+   let text = ₃ in
    let textLen = len (chars text) in
    let padding = (w - textLen) / 2 in
    printAt row (col + padding) text
 
 # Print right-aligned text (row, col, width, text)
+# 4 args: always capture from ₃ as indices shift
 ╭─ printRight : I → I → I → String → ()
 │  ◇io
 ╰─ let row = ₃ in
-   let col = ₂ in
-   let w = ₁ in
-   let text = ₀ in
+   let col = ₃ in
+   let w = ₃ in
+   let text = ₃ in
    let textLen = len (chars text) in
    printAt row (col + w - textLen) text
 
 # ============ Progress Bar ============
 
 # Draw a progress bar (row, col, width, progress 0.0-1.0)
+# 4 args: always capture from ₃ as indices shift
 ╭─ progressBar : I → I → I → F → ()
 │  ◇io
 ╰─ let row = ₃ in
-   let col = ₂ in
-   let w = ₁ in
-   let progress = ₀ in
+   let col = ₃ in
+   let w = ₃ in
+   let progress = ₃ in
    let filled = floor (progress × (toFloat w)) in
    let empty = w - filled in
    let _ = cursorTo row col in
@@ -138,34 +143,20 @@ use "tui.goth"
 ╭─ isign : I → I
 ╰─ if ₀ < 0 then 0 - 1 else if ₀ > 0 then 1 else 0
 
-# Draw a line using Bresenham's algorithm
-# line row1 col1 row2 col2 char
-╭─ line : I → I → I → I → String → ()
-│  ◇io
-╰─ let y0 = ₄ in
-   let x0 = ₃ in
-   let y1 = ₂ in
-   let x1 = ₁ in
-   let ch = ₀ in
-   let dx = iabs (x1 - x0) in
-   let dy = 0 - iabs (y1 - y0) in
-   let sx = isign (x1 - x0) in
-   let sy = isign (y1 - y0) in
-   lineStep x0 y0 x1 y1 (dx + dy) dx dy sx sy ch
-
 # Internal: Bresenham step function
+# 10 args: always capture from ₉ as indices shift
 ╭─ lineStep : I → I → I → I → I → I → I → I → I → String → ()
 │  ◇io
 ╰─ let x = ₉ in
-   let y = ₈ in
-   let x1 = ₇ in
-   let y1 = ₆ in
-   let err = ₅ in
-   let dx = ₄ in
-   let dy = ₃ in
-   let sx = ₂ in
-   let sy = ₁ in
-   let ch = ₀ in
+   let y = ₉ in
+   let x1 = ₉ in
+   let y1 = ₉ in
+   let err = ₉ in
+   let dx = ₉ in
+   let dy = ₉ in
+   let sx = ₉ in
+   let sy = ₉ in
+   let ch = ₉ in
    let _ = plot y x ch in
    if x = x1 ∧ y = y1 then ⟨⟩
    else
@@ -176,28 +167,35 @@ use "tui.goth"
      let newY = if e2 <= dx then y + sy else y in
      lineStep newX newY x1 y1 finalErr dx dy sx sy ch
 
+# Draw a line using Bresenham's algorithm
+# line row1 col1 row2 col2 char
+# 5 args: always capture from ₄ as indices shift
+╭─ line : I → I → I → I → String → ()
+│  ◇io
+╰─ let y0 = ₄ in
+   let x0 = ₄ in
+   let y1 = ₄ in
+   let x1 = ₄ in
+   let ch = ₄ in
+   let dx = iabs (x1 - x0) in
+   let dy = 0 - iabs (y1 - y0) in
+   let sx = isign (x1 - x0) in
+   let sy = isign (y1 - y0) in
+   lineStep x0 y0 x1 y1 (dx + dy) dx dy sx sy ch
+
 # ============ Circle Drawing ============
 
-# Draw a circle using midpoint algorithm
-# circle centerRow centerCol radius char
-╭─ circle : I → I → I → String → ()
-│  ◇io
-╰─ let cy = ₃ in
-   let cx = ₂ in
-   let r = ₁ in
-   let ch = ₀ in
-   circleStep cx cy r 0 r (1 - r) ch
-
 # Internal: Circle step (midpoint algorithm)
+# 7 args: always capture from ₆ as indices shift
 ╭─ circleStep : I → I → I → I → I → I → String → ()
 │  ◇io
 ╰─ let cx = ₆ in
-   let cy = ₅ in
-   let r = ₄ in
-   let x = ₃ in
-   let y = ₂ in
-   let d = ₁ in
-   let ch = ₀ in
+   let cy = ₆ in
+   let r = ₆ in
+   let x = ₆ in
+   let y = ₆ in
+   let d = ₆ in
+   let ch = ₆ in
    if x > y then ⟨⟩
    else
      # Plot 8 octants
@@ -214,16 +212,28 @@ use "tui.goth"
      else
        circleStep cx cy r (x + 1) (y - 1) (d + 2 × (x - y) + 5) ch
 
+# Draw a circle using midpoint algorithm
+# circle centerRow centerCol radius char
+# 4 args: always capture from ₃ as indices shift
+╭─ circle : I → I → I → String → ()
+│  ◇io
+╰─ let cy = ₃ in
+   let cx = ₃ in
+   let r = ₃ in
+   let ch = ₃ in
+   circleStep cx cy r 0 r (1 - r) ch
+
 # ============ Sprite / Bitmap Drawing ============
 
 # Draw a multi-line string as a sprite at position
 # Each line of the string becomes a row
 # sprite row col lines
+# 3 args: always capture from ₂ as indices shift
 ╭─ sprite : I → I → [n]String → ()
 │  ◇io
 ╰─ let row = ₂ in
-   let col = ₁ in
-   let lns = ₀ in
+   let col = ₂ in
+   let lns = ₂ in
    if len lns = 0 then ⟨⟩
    else let _ = printAt row col (lns[0]) in
         sprite (row + 1) col (drop 1 lns)

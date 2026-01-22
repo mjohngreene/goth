@@ -22,10 +22,11 @@
   }
 
 # Repeat a string n times
+# After pattern 'n' binds, indices shift: String is at ₂, count was at ₁ but now n is at ₀
 ╭─ repeatStr : String → ℤ → String
 ╰─ match ₀ {
     0 → "";
-    n → strConcat ₁ (repeatStr ₁ (n - 1))
+    n → strConcat ₂ (repeatStr ₂ (n - 1))
   }
 
 # Convert integer to string (uses toString primitive)

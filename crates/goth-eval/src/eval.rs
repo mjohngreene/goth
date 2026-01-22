@@ -200,7 +200,10 @@ impl Evaluator {
                     match *func {
                         Value::Closure(closure) => {
                             let mut new_env = closure.env.clone();
-                            for a in args.iter().rev() {
+                            // Push args in application order (first arg first, last arg last)
+                            // so that de Bruijn indices work correctly:
+                            // ₀ = last arg (most recent), ₁ = second-to-last, etc.
+                            for a in &args {
                                 new_env.push(a.clone());
                             }
                             

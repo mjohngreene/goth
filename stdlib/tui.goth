@@ -294,23 +294,24 @@ let blockRight = "▐"
 ╰─ print (strConcat (strConcat (strConcat (strConcat "\x1b[" (toString (30 + ₁))) "m") ₀) "\x1b[0m")
 
 # Draw a horizontal line at position (row, col, length, char)
+# 4 args: capture all from ₃ as indices shift
 ╭─ hline : I → I → I → String → ()
 │  ◇io
 ╰─ let row = ₃ in
-   let col = ₂ in
-   let len = ₁ in
-   let ch = ₀ in
+   let col = ₃ in
+   let len = ₃ in
+   let ch = ₃ in
    let _ = cursorTo row col in
    print (joinStrings (replicate len ch))
 
 # Draw a vertical line at position (row, col, length, char)
-# Note: This requires multiple cursor movements
+# 4 args: capture all from ₃ as indices shift
 ╭─ vline : I → I → I → String → ()
 │  ◇io
 ╰─ let row = ₃ in
-   let col = ₂ in
-   let len = ₁ in
-   let ch = ₀ in
+   let col = ₃ in
+   let len = ₃ in
+   let ch = ₃ in
    if len = 0 then ⟨⟩
    else let _ = printAt row col ch in
         vline (row + 1) col (len - 1) ch
