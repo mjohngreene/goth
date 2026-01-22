@@ -1,0 +1,9 @@
+# Simple ANSI escape test
+# Tests that hex escapes work correctly
+
+╭─ main : () → ()
+│  ◇io
+╰─ let _ = print "\x1b[31mRed text\x1b[0m" in
+   let _ = print "\x1b[32mGreen text\x1b[0m" in
+   let _ = print "\x1b[1m\x1b[33mBold yellow\x1b[0m" in
+   print "Normal text"

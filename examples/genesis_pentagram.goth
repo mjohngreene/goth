@@ -1,0 +1,66 @@
+# Genesis Pentagram Demo
+# Draws the first five verses of Genesis around a pentagram star
+#
+# Run with: goth examples/genesis_pentagram.goth
+
+use "../stdlib/canvas.goth"
+
+# Genesis 1:1-5 (shortened for terminal display)
+let verse1 = "1. In the beginning God created heaven and earth."
+let verse2 = "2. Darkness upon the face of the deep."
+let verse3 = "3. And God said, Let there be light."
+let verse4 = "4. God divided the light from darkness."
+let verse5 = "5. Evening and morning: the first day."
+
+# Pentagram vertices (precomputed for center 15,40 radius 10)
+# Point 0: top (row 5, col 40)
+# Point 1: upper-right (row 11, col 50)
+# Point 2: lower-right (row 21, col 46)
+# Point 3: lower-left (row 21, col 34)
+# Point 4: upper-left (row 11, col 30)
+
+# Draw the five lines of the pentagram star
+# Connect: 0→2, 2→4, 4→1, 1→3, 3→0
+╭─ drawStar : () → ()
+│  ◇io
+╰─ let _ = line 5 40 21 46 "*" in
+   let _ = line 21 46 11 30 "*" in
+   let _ = line 11 30 11 50 "*" in
+   let _ = line 11 50 21 34 "*" in
+   line 21 34 5 40 "*"
+
+# Print verses at the five star points
+╭─ printVerses : () → ()
+│  ◇io
+╰─ let _ = printAt 3 10 verse1 in
+   let _ = printAt 10 55 verse2 in
+   let _ = printAt 23 45 verse3 in
+   let _ = printAt 23 1 verse4 in
+   printAt 10 1 verse5
+
+╭─ main : () → ()
+│  ◇io
+╰─ let _ = clear ⟨⟩ in
+   let _ = cursorHide ⟨⟩ in
+   # Title
+   let _ = bold ⟨⟩ in
+   let _ = fgYellow ⟨⟩ in
+   let _ = printAt 1 25 "Genesis Pentagram" in
+   let _ = resetStyle ⟨⟩ in
+   # Draw outer circle
+   let _ = fgCyan ⟨⟩ in
+   let _ = circle 13 40 12 "o" in
+   let _ = resetStyle ⟨⟩ in
+   # Draw the pentagram
+   let _ = bold ⟨⟩ in
+   let _ = fgYellow ⟨⟩ in
+   let _ = drawStar ⟨⟩ in
+   let _ = resetStyle ⟨⟩ in
+   # Print verses
+   let _ = fgGreen ⟨⟩ in
+   let _ = printVerses ⟨⟩ in
+   let _ = resetStyle ⟨⟩ in
+   # Footer
+   let _ = printAt 26 20 "The five days of creation..." in
+   let _ = cursorTo 28 1 in
+   cursorShow ⟨⟩

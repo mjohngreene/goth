@@ -60,6 +60,8 @@ impl TypeChecker {
                      "reverse", "take", "drop", "concat", "⧺",
                      // I/O
                      "print", "readLine", "readFile", "writeFile",
+                     // TUI primitives
+                     "write", "flush", "readKey", "rawModeEnter", "rawModeExit", "sleep",
                      // String operations (for wc-like utilities)
                      "lines", "words", "bytes",
                      "strEq", "startsWith", "endsWith", "contains"] {

@@ -24,8 +24,10 @@ pub fn infer(ctx: &mut Context, expr: &Expr) -> TypeResult<Type> {
         }
         
         Expr::Name(name) => {
+            // First check global context, then fall back to primitives
             ctx.lookup_global(name)
                 .cloned()
+                .or_else(|| primitive_type(name))
                 .ok_or_else(|| TypeError::UndefinedName(name.to_string()))
         }
         

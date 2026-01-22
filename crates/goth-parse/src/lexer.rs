@@ -341,13 +341,13 @@ pub enum Token {
     #[regex(r"[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?", |lex| lex.slice().parse::<f64>().ok())]
     Float(f64),
 
-    #[regex(r#""([^"\\]|\\.)*""#, |lex| {
+    #[regex(r#""([^"\\]|\\x[0-9a-fA-F]{2}|\\.)*""#, |lex| {
         let s = lex.slice();
         Some(unescape_string(&s[1..s.len()-1]))
     })]
     String(String),
 
-    #[regex(r"'([^'\\]|\\.)'", |lex| {
+    #[regex(r"'([^'\\]|\\x[0-9a-fA-F]{2}|\\.)'", |lex| {
         let s = lex.slice();
         unescape_char(&s[1..s.len()-1])
     })]
@@ -427,6 +427,31 @@ fn unescape_string(s: &str) -> String {
                 Some('\\') => result.push('\\'),
                 Some('"') => result.push('"'),
                 Some('0') => result.push('\0'),
+                Some('x') => {
+                    // Parse \xHH hex escape (exactly 2 hex digits)
+                    let mut hex = String::new();
+                    for _ in 0..2 {
+                        if let Some(&c) = chars.peek() {
+                            if c.is_ascii_hexdigit() {
+                                hex.push(chars.next().unwrap());
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                    if hex.len() == 2 {
+                        if let Ok(byte) = u8::from_str_radix(&hex, 16) {
+                            result.push(byte as char);
+                        } else {
+                            result.push_str("\\x");
+                            result.push_str(&hex);
+                        }
+                    } else {
+                        // Not enough hex digits, emit literally
+                        result.push_str("\\x");
+                        result.push_str(&hex);
+                    }
+                }
                 Some(c) => { result.push('\\'); result.push(c); }
                 None => result.push('\\'),
             }
@@ -438,7 +463,7 @@ fn unescape_string(s: &str) -> String {
 }
 
 fn unescape_char(s: &str) -> Option<char> {
-    let mut chars = s.chars();
+    let mut chars = s.chars().peekable();
     match chars.next()? {
         '\\' => match chars.next()? {
             'n' => Some('\n'),
@@ -447,6 +472,24 @@ fn unescape_char(s: &str) -> Option<char> {
             '\\' => Some('\\'),
             '\'' => Some('\''),
             '0' => Some('\0'),
+            'x' => {
+                // Parse \xHH hex escape
+                let mut hex = String::new();
+                for _ in 0..2 {
+                    if let Some(&c) = chars.peek() {
+                        if c.is_ascii_hexdigit() {
+                            hex.push(chars.next().unwrap());
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                if hex.len() == 2 {
+                    u8::from_str_radix(&hex, 16).ok().map(|b| b as char)
+                } else {
+                    None
+                }
+            }
             c => Some(c),
         },
         c => Some(c),
@@ -664,6 +707,31 @@ mod tests {
     fn test_string_escapes() {
         let mut lex = Lexer::new(r#""hello\nworld""#);
         assert_eq!(lex.next(), Some(Token::String("hello\nworld".into())));
+    }
+
+    #[test]
+    fn test_hex_escapes() {
+        // Test ANSI escape sequence (ESC = 0x1B)
+        let mut lex = Lexer::new(r#""\x1b[31m""#);
+        assert_eq!(lex.next(), Some(Token::String("\x1b[31m".into())));
+
+        // Test multiple hex escapes (ASCII range only for Rust string literals)
+        let mut lex = Lexer::new(r#""\x00\x7f\x41""#);
+        assert_eq!(lex.next(), Some(Token::String("\x00\x7fA".into())));
+
+        // Test mixed escapes
+        let mut lex = Lexer::new(r#""tab:\there:\x0d""#);
+        assert_eq!(lex.next(), Some(Token::String("tab:\there:\r".into())));
+
+        // Test ANSI color codes
+        let mut lex = Lexer::new(r#""\x1b[0m""#);
+        assert_eq!(lex.next(), Some(Token::String("\x1b[0m".into())));
+    }
+
+    #[test]
+    fn test_char_hex_escapes() {
+        let mut lex = Lexer::new(r"'\x1b'");
+        assert_eq!(lex.next(), Some(Token::Char('\x1b')));
     }
 
     #[test]

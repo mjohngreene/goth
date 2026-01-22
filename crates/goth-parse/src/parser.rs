@@ -367,11 +367,11 @@ impl<'a> Parser<'a> {
                 }
                 Some(Token::LBracket) => {
                     // Only allow indexing on expressions that could be arrays:
-                    // names, field access, other indices, parenthesized, arrays themselves
+                    // names, de Bruijn indices, field access, other indices, parenthesized, arrays themselves
                     // Don't allow indexing on literals (e.g., 2[1,2] makes no sense)
                     let can_index = matches!(
                         &expr,
-                        Expr::Name(_) | Expr::Field(_, _) | Expr::Index(_, _) |
+                        Expr::Name(_) | Expr::Idx(_) | Expr::Field(_, _) | Expr::Index(_, _) |
                         Expr::App(_, _) | Expr::Array(_) | Expr::Tuple(_) |
                         Expr::If { .. } | Expr::Let { .. } | Expr::LetRec { .. } |
                         Expr::Match { .. } | Expr::Do { .. } | Expr::BinOp(_, _, _)
@@ -1323,4 +1323,33 @@ pub fn parse_pattern(source: &str) -> ParseResult<Pattern> {
 /// Parse a module from a string
 pub fn parse_module(source: &str, name: &str) -> ParseResult<Module> {
     Parser::new(source).parse_module(name)
+}
+
+#[cfg(test)]
+mod parser_regression_tests {
+    use super::*;
+    use crate::resolve::resolve_expr;
+
+    /// Test that de Bruijn indices can be indexed (e.g., ₀[0])
+    #[test]
+    fn test_debruijn_index_access() {
+        let expr_str = "₀[0]";
+        let parsed = parse_expr(expr_str).unwrap();
+        // Should be Index(Idx(0), [Lit(Int(0))])
+        match &parsed {
+            Expr::Index(base, indices) => {
+                assert!(matches!(**base, Expr::Idx(0)));
+                assert_eq!(indices.len(), 1);
+            }
+            _ => panic!("Expected Index expression, got {:?}", parsed),
+        }
+        let resolved = resolve_expr(parsed);
+        // Should remain the same after resolution
+        match &resolved {
+            Expr::Index(base, _) => {
+                assert!(matches!(**base, Expr::Idx(0)));
+            }
+            _ => panic!("Expected Index expression after resolution"),
+        }
+    }
 }

@@ -62,7 +62,8 @@ pub enum PrimFn {
     Iota, Range,  // Sequence generation
     MatMul, Dot, Outer, Inner, Norm,
     Chars, ToString, StrConcat,
-    Print, ReadLine, ReadFile, WriteFile,
+    Print, Write, Flush, ReadLine, ReadKey, ReadFile, WriteFile,
+    RawModeEnter, RawModeExit, Sleep,
     ToInt, ToFloat, ToBool, ToChar,
     ParseInt, ParseFloat,  // String parsing
     Lines, Words, Bytes,  // String splitting for wc

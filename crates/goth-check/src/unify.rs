@@ -1,16 +1,38 @@
 //! Type unification algorithm
 
-use goth_ast::types::Type;
+use goth_ast::types::{Type, PrimType};
 use goth_ast::shape::{Shape, Dim};
 use crate::error::{TypeError, TypeResult};
 use crate::subst::{Subst, apply_type};
 use crate::shapes::{unify_shapes as shapes_unify_shapes, ShapeSubst};
+
+/// Check if two primitive types are compatible integer types
+/// This allows ℤ (Int) to unify with I64/I32, and ℕ (Nat) to unify with unsigned types
+fn are_compatible_int_types(p1: PrimType, p2: PrimType) -> bool {
+    use PrimType::*;
+    matches!((p1, p2),
+        // ℤ (Int) is compatible with all fixed-width signed integers
+        (Int, I64) | (I64, Int) |
+        (Int, I32) | (I32, Int) |
+        // ℕ (Nat) is compatible with all fixed-width integers (natural numbers fit in signed too)
+        (Nat, I64) | (I64, Nat) |
+        (Nat, I32) | (I32, Nat) |
+        // ℕ and ℤ are compatible (natural numbers are integers)
+        (Nat, Int) | (Int, Nat)
+    )
+}
 
 /// Unify two types, returning a substitution that makes them equal
 pub fn unify(t1: &Type, t2: &Type) -> TypeResult<Subst> {
     match (t1, t2) {
         // Identical primitives
         (Type::Prim(p1), Type::Prim(p2)) if p1 == p2 => {
+            Ok(Subst::new())
+        }
+
+        // Integer type equivalences: ℤ ↔ I64, ℤ ↔ I32, ℕ ↔ I64
+        // These are semantically compatible for practical purposes
+        (Type::Prim(p1), Type::Prim(p2)) if are_compatible_int_types(*p1, *p2) => {
             Ok(Subst::new())
         }
 
@@ -75,6 +97,24 @@ pub fn unify(t1: &Type, t2: &Type) -> TypeResult<Subst> {
         // Holes unify with anything
         (Type::Hole, _) | (_, Type::Hole) => {
             Ok(Subst::new())
+        }
+
+        // String ↔ [n]Char equivalence
+        // The String type is semantically equivalent to a char tensor
+        (Type::Prim(PrimType::String), Type::Tensor(sh, elem)) |
+        (Type::Tensor(sh, elem), Type::Prim(PrimType::String)) => {
+            // Element must be Char
+            let s = unify(elem, &Type::Prim(PrimType::Char))?;
+            // Shape is unconstrained (any length string)
+            // But we need to unify the shape with a fresh variable if not already
+            if sh.0.len() == 1 {
+                Ok(s)
+            } else {
+                Err(TypeError::UnificationFailure {
+                    t1: t1.clone(),
+                    t2: t2.clone(),
+                })
+            }
         }
 
         // Mismatch

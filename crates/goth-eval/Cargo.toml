@@ -11,5 +11,8 @@ goth-ast = { path = "../goth-ast" }
 thiserror = "1.0"
 ordered-float = { version = "4.2", features = ["serde"] }
 
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 [dev-dependencies]
 pretty_assertions = "1.4"
