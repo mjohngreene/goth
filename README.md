@@ -156,4 +156,6 @@ is more efficient for the LLM to generate and edit.
 
 ## License
 
-MIT © 2026 Sigilante
+The 𝔤𝔬𝔱𝔥 language name is reserved as a trademark by Sigilante.
+
+The 𝔤𝔬𝔱𝔥 source code is available under the MIT License, © 2026 Sigilante.
