@@ -622,7 +622,11 @@ fn range(start: Value, end: Value) -> EvalResult<Value> {
 
 /// toString: Convert any value to a string representation
 fn to_string(value: Value) -> EvalResult<Value> {
-    Ok(Value::string(&format!("{}", value)))
+    // Handle Char specially to avoid quotes (Display adds quotes for REPL)
+    match &value {
+        Value::Char(c) => Ok(Value::string(&c.to_string())),
+        _ => Ok(Value::string(&format!("{}", value))),
+    }
 }
 
 /// chars: Convert a string (char tensor) to an array of individual characters
