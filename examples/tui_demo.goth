@@ -1,0 +1,84 @@
+# TUI Demo - Demonstrating Goth's terminal graphics capabilities
+#
+# Run with: goth examples/tui_demo.goth
+#
+# This example shows:
+# - Screen clearing and cursor control
+# - Color output (foreground and background)
+# - Box drawing with Unicode characters
+# - Text positioning
+# - Line drawing (Bresenham's algorithm)
+
+use "../stdlib/canvas.goth"
+
+# Main demo function
+╭─ main : () → ()
+│  ◇io
+╰─ # Clear screen and hide cursor
+   let _ = clear ⟨⟩ in
+   let _ = cursorHide ⟨⟩ in
+
+   # Draw a title box at top
+   let _ = fgCyan ⟨⟩ in
+   let _ = box 1 1 40 3 in
+   let _ = resetStyle ⟨⟩ in
+
+   # Print centered title
+   let _ = bold ⟨⟩ in
+   let _ = fgYellow ⟨⟩ in
+   let _ = printCentered 2 2 38 "Goth TUI Demo" in
+   let _ = resetStyle ⟨⟩ in
+
+   # Draw color palette
+   let _ = printAt 5 2 "Color Palette:" in
+
+   # Show all 8 basic colors
+   let _ = cursorTo 6 2 in
+   let _ = bg 0 in let _ = print "  " in # black
+   let _ = bg 1 in let _ = print "  " in # red
+   let _ = bg 2 in let _ = print "  " in # green
+   let _ = bg 3 in let _ = print "  " in # yellow
+   let _ = bg 4 in let _ = print "  " in # blue
+   let _ = bg 5 in let _ = print "  " in # magenta
+   let _ = bg 6 in let _ = print "  " in # cyan
+   let _ = bg 7 in let _ = print "  " in # white
+   let _ = resetStyle ⟨⟩ in
+
+   # Draw a simple shape
+   let _ = fgGreen ⟨⟩ in
+   let _ = printAt 8 2 "Line Drawing:" in
+   let _ = resetStyle ⟨⟩ in
+
+   # Draw diagonal lines to form an X
+   let _ = fgRed ⟨⟩ in
+   let _ = line 10 5 14 15 "*" in
+   let _ = line 14 5 10 15 "*" in
+   let _ = resetStyle ⟨⟩ in
+
+   # Draw a box with content
+   let _ = fgMagenta ⟨⟩ in
+   let _ = box 10 20 25 6 in
+   let _ = resetStyle ⟨⟩ in
+
+   let _ = printAt 11 22 "Box with content" in
+   let _ = printAt 12 22 "Line 2 of text" in
+   let _ = printAt 13 22 "Line 3 of text" in
+   let _ = printAt 14 22 "Unicode: " in
+   let _ = fgYellow ⟨⟩ in
+   let _ = print "a b c d e" in
+   let _ = resetStyle ⟨⟩ in
+
+   # Progress bar demo
+   let _ = printAt 17 2 "Progress Bar:" in
+   let _ = progressBar 18 2 30 0.7 in
+
+   # Double-line box
+   let _ = fgBlue ⟨⟩ in
+   let _ = box2 10 50 20 6 in
+   let _ = resetStyle ⟨⟩ in
+   let _ = printCentered 12 51 18 "Double Box" in
+
+   # Show cursor and move to bottom
+   let _ = cursorTo 21 1 in
+   let _ = cursorShow ⟨⟩ in
+   print ""

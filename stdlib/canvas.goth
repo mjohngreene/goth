@@ -1,0 +1,257 @@
+# Goth Standard Library - Canvas
+# Higher-level drawing primitives built on top of TUI
+#
+# Usage:
+#   use "stdlib/canvas.goth"
+#
+# This provides:
+# - Line drawing (Bresenham's algorithm)
+# - Box/rectangle drawing
+# - Text rendering at positions
+#
+# Note: For sequencing multiple I/O operations, use let _ = op1 in op2
+
+use "tui.goth"
+
+# ============ Line Drawing ============
+
+# Draw a filled horizontal bar with color
+╭─ hbar : I → I → I → I → ()
+│  ◇io
+╰─ let row = ₃ in
+   let col = ₂ in
+   let len = ₁ in
+   let color = ₀ in
+   let _ = cursorTo row col in
+   let _ = bg256 color in
+   let _ = print (joinStrings (replicate len " ")) in
+   resetStyle ⟨⟩
+
+# ============ Box Drawing ============
+
+# Draw a box outline (row, col, width, height)
+╭─ box : I → I → I → I → ()
+│  ◇io
+╰─ let row = ₃ in
+   let col = ₂ in
+   let w = ₁ in
+   let h = ₀ in
+   # Top edge
+   let _ = printAt row col boxTopLeft in
+   let _ = hline row (col + 1) (w - 2) boxHorizontal in
+   let _ = printAt row (col + w - 1) boxTopRight in
+   # Bottom edge
+   let _ = printAt (row + h - 1) col boxBottomLeft in
+   let _ = hline (row + h - 1) (col + 1) (w - 2) boxHorizontal in
+   let _ = printAt (row + h - 1) (col + w - 1) boxBottomRight in
+   # Left edge
+   let _ = vline (row + 1) col (h - 2) boxVertical in
+   # Right edge
+   vline (row + 1) (col + w - 1) (h - 2) boxVertical
+
+# Draw a double-line box outline (row, col, width, height)
+╭─ box2 : I → I → I → I → ()
+│  ◇io
+╰─ let row = ₃ in
+   let col = ₂ in
+   let w = ₁ in
+   let h = ₀ in
+   # Top edge
+   let _ = printAt row col boxTopLeft2 in
+   let _ = hline row (col + 1) (w - 2) boxHorizontal2 in
+   let _ = printAt row (col + w - 1) boxTopRight2 in
+   # Bottom edge
+   let _ = printAt (row + h - 1) col boxBottomLeft2 in
+   let _ = hline (row + h - 1) (col + 1) (w - 2) boxHorizontal2 in
+   let _ = printAt (row + h - 1) (col + w - 1) boxBottomRight2 in
+   # Left edge
+   let _ = vline (row + 1) col (h - 2) boxVertical2 in
+   # Right edge
+   vline (row + 1) (col + w - 1) (h - 2) boxVertical2
+
+# Draw a filled rectangle (row, col, width, height, char)
+╭─ fillRect : I → I → I → I → String → ()
+│  ◇io
+╰─ let row = ₄ in
+   let col = ₃ in
+   let w = ₂ in
+   let h = ₁ in
+   let ch = ₀ in
+   if h = 0 then ⟨⟩
+   else let _ = hline row col w ch in
+        fillRect (row + 1) col w (h - 1) ch
+
+# ============ Text Rendering ============
+
+# Print centered text in a box (row, col, width, text)
+╭─ printCentered : I → I → I → String → ()
+│  ◇io
+╰─ let row = ₃ in
+   let col = ₂ in
+   let w = ₁ in
+   let text = ₀ in
+   let textLen = len (chars text) in
+   let padding = (w - textLen) / 2 in
+   printAt row (col + padding) text
+
+# Print right-aligned text (row, col, width, text)
+╭─ printRight : I → I → I → String → ()
+│  ◇io
+╰─ let row = ₃ in
+   let col = ₂ in
+   let w = ₁ in
+   let text = ₀ in
+   let textLen = len (chars text) in
+   printAt row (col + w - textLen) text
+
+# ============ Progress Bar ============
+
+# Draw a progress bar (row, col, width, progress 0.0-1.0)
+╭─ progressBar : I → I → I → F → ()
+│  ◇io
+╰─ let row = ₃ in
+   let col = ₂ in
+   let w = ₁ in
+   let progress = ₀ in
+   let filled = floor (progress × (toFloat w)) in
+   let empty = w - filled in
+   let _ = cursorTo row col in
+   let _ = print "[" in
+   let _ = fgGreen ⟨⟩ in
+   let _ = print (joinStrings (replicate (toInt filled) "█")) in
+   let _ = resetStyle ⟨⟩ in
+   let _ = print (joinStrings (replicate (toInt empty) "░")) in
+   print "]"
+
+# ============ Bresenham Line Drawing ============
+
+# Plot a single point (row, col, char)
+╭─ plot : I → I → String → ()
+│  ◇io
+╰─ printAt ₂ ₁ ₀
+
+# Absolute value for integers
+╭─ iabs : I → I
+╰─ if ₀ < 0 then 0 - ₀ else ₀
+
+# Sign of integer (-1, 0, or 1)
+╭─ isign : I → I
+╰─ if ₀ < 0 then 0 - 1 else if ₀ > 0 then 1 else 0
+
+# Draw a line using Bresenham's algorithm
+# line row1 col1 row2 col2 char
+╭─ line : I → I → I → I → String → ()
+│  ◇io
+╰─ let y0 = ₄ in
+   let x0 = ₃ in
+   let y1 = ₂ in
+   let x1 = ₁ in
+   let ch = ₀ in
+   let dx = iabs (x1 - x0) in
+   let dy = 0 - iabs (y1 - y0) in
+   let sx = isign (x1 - x0) in
+   let sy = isign (y1 - y0) in
+   lineStep x0 y0 x1 y1 (dx + dy) dx dy sx sy ch
+
+# Internal: Bresenham step function
+╭─ lineStep : I → I → I → I → I → I → I → I → I → String → ()
+│  ◇io
+╰─ let x = ₉ in
+   let y = ₈ in
+   let x1 = ₇ in
+   let y1 = ₆ in
+   let err = ₅ in
+   let dx = ₄ in
+   let dy = ₃ in
+   let sx = ₂ in
+   let sy = ₁ in
+   let ch = ₀ in
+   let _ = plot y x ch in
+   if x = x1 ∧ y = y1 then ⟨⟩
+   else
+     let e2 = 2 × err in
+     let newErr = if e2 >= dy then err + dy else err in
+     let newX = if e2 >= dy then x + sx else x in
+     let finalErr = if e2 <= dx then newErr + dx else newErr in
+     let newY = if e2 <= dx then y + sy else y in
+     lineStep newX newY x1 y1 finalErr dx dy sx sy ch
+
+# ============ Circle Drawing ============
+
+# Draw a circle using midpoint algorithm
+# circle centerRow centerCol radius char
+╭─ circle : I → I → I → String → ()
+│  ◇io
+╰─ let cy = ₃ in
+   let cx = ₂ in
+   let r = ₁ in
+   let ch = ₀ in
+   circleStep cx cy r 0 r (1 - r) ch
+
+# Internal: Circle step (midpoint algorithm)
+╭─ circleStep : I → I → I → I → I → I → String → ()
+│  ◇io
+╰─ let cx = ₆ in
+   let cy = ₅ in
+   let r = ₄ in
+   let x = ₃ in
+   let y = ₂ in
+   let d = ₁ in
+   let ch = ₀ in
+   if x > y then ⟨⟩
+   else
+     # Plot 8 octants
+     let _ = plot (cy + y) (cx + x) ch in
+     let _ = plot (cy + y) (cx - x) ch in
+     let _ = plot (cy - y) (cx + x) ch in
+     let _ = plot (cy - y) (cx - x) ch in
+     let _ = plot (cy + x) (cx + y) ch in
+     let _ = plot (cy + x) (cx - y) ch in
+     let _ = plot (cy - x) (cx + y) ch in
+     let _ = plot (cy - x) (cx - y) ch in
+     if d < 0 then
+       circleStep cx cy r (x + 1) y (d + 2 × x + 3) ch
+     else
+       circleStep cx cy r (x + 1) (y - 1) (d + 2 × (x - y) + 5) ch
+
+# ============ Sprite / Bitmap Drawing ============
+
+# Draw a multi-line string as a sprite at position
+# Each line of the string becomes a row
+# sprite row col lines
+╭─ sprite : I → I → [n]String → ()
+│  ◇io
+╰─ let row = ₂ in
+   let col = ₁ in
+   let lns = ₀ in
+   if len lns = 0 then ⟨⟩
+   else let _ = printAt row col (lns[0]) in
+        sprite (row + 1) col (drop 1 lns)
+
+# ============ Animation Helpers ============
+
+# Pause for visual effect (prints nothing, just delays via output)
+# Note: This is a workaround - real delays need runtime support
+╭─ flush : () → ()
+│  ◇io
+╰─ print ""
+
+# Set up alternate screen buffer (preserves main terminal)
+╭─ enterAltScreen : () → ()
+│  ◇io
+╰─ print "\x1b[?1049h"
+
+# Exit alternate screen buffer (restore main terminal)
+╭─ exitAltScreen : () → ()
+│  ◇io
+╰─ print "\x1b[?1049l"
+
+# Enable mouse tracking (basic mode)
+╭─ enableMouse : () → ()
+│  ◇io
+╰─ print "\x1b[?1000h"
+
+# Disable mouse tracking
+╭─ disableMouse : () → ()
+│  ◇io
+╰─ print "\x1b[?1000l"

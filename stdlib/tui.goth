@@ -1,0 +1,316 @@
+# Goth Standard Library - TUI (Terminal User Interface)
+# ANSI escape code primitives for terminal graphics
+#
+# Usage: use "stdlib/tui.goth"
+#
+# These functions output ANSI escape sequences that work in
+# most modern terminals (xterm, iTerm2, Windows Terminal, etc.)
+#
+# Note: For sequencing multiple I/O operations, use let _ = op1 in op2
+
+use "string.goth"
+use "prelude.goth"
+
+# ============ ANSI Escape Sequences ============
+# The escape character (ESC = 0x1B)
+let esc = "\x1b"
+
+# Control Sequence Introducer (CSI = ESC[)
+let csi = "\x1b["
+
+# ============ Cursor Movement ============
+
+# Move cursor to home position (1,1)
+╭─ cursorHome : () → ()
+│  ◇io
+╰─ print "\x1b[H"
+
+# Move cursor to specific position (row, col) - 1-indexed
+╭─ cursorTo : I → I → ()
+│  ◇io
+╰─ print (strConcat (strConcat (strConcat (strConcat "\x1b[" (toString ₁)) ";") (toString ₀)) "H")
+
+# Move cursor up n lines
+╭─ cursorUp : I → ()
+│  ◇io
+╰─ print (strConcat (strConcat "\x1b[" (toString ₀)) "A")
+
+# Move cursor down n lines
+╭─ cursorDown : I → ()
+│  ◇io
+╰─ print (strConcat (strConcat "\x1b[" (toString ₀)) "B")
+
+# Move cursor right n columns
+╭─ cursorRight : I → ()
+│  ◇io
+╰─ print (strConcat (strConcat "\x1b[" (toString ₀)) "C")
+
+# Move cursor left n columns
+╭─ cursorLeft : I → ()
+│  ◇io
+╰─ print (strConcat (strConcat "\x1b[" (toString ₀)) "D")
+
+# Save cursor position
+╭─ cursorSave : () → ()
+│  ◇io
+╰─ print "\x1b[s"
+
+# Restore cursor position
+╭─ cursorRestore : () → ()
+│  ◇io
+╰─ print "\x1b[u"
+
+# Hide cursor
+╭─ cursorHide : () → ()
+│  ◇io
+╰─ print "\x1b[?25l"
+
+# Show cursor
+╭─ cursorShow : () → ()
+│  ◇io
+╰─ print "\x1b[?25h"
+
+# ============ Screen Clearing ============
+
+# Clear entire screen
+╭─ clearScreen : () → ()
+│  ◇io
+╰─ print "\x1b[2J"
+
+# Clear screen and move cursor home
+╭─ clear : () → ()
+│  ◇io
+╰─ print "\x1b[2J\x1b[H"
+
+# Clear from cursor to end of screen
+╭─ clearToEnd : () → ()
+│  ◇io
+╰─ print "\x1b[J"
+
+# Clear from cursor to end of line
+╭─ clearLine : () → ()
+│  ◇io
+╰─ print "\x1b[K"
+
+# Clear entire line
+╭─ clearEntireLine : () → ()
+│  ◇io
+╰─ print "\x1b[2K"
+
+# ============ Text Attributes ============
+
+# Reset all attributes
+╭─ resetStyle : () → ()
+│  ◇io
+╰─ print "\x1b[0m"
+
+# Bold text
+╭─ bold : () → ()
+│  ◇io
+╰─ print "\x1b[1m"
+
+# Dim text
+╭─ dim : () → ()
+│  ◇io
+╰─ print "\x1b[2m"
+
+# Italic text
+╭─ italic : () → ()
+│  ◇io
+╰─ print "\x1b[3m"
+
+# Underline text
+╭─ underline : () → ()
+│  ◇io
+╰─ print "\x1b[4m"
+
+# Blink text
+╭─ blink : () → ()
+│  ◇io
+╰─ print "\x1b[5m"
+
+# Reverse video (swap fg/bg)
+╭─ reverse : () → ()
+│  ◇io
+╰─ print "\x1b[7m"
+
+# ============ Basic Colors (0-7) ============
+# Standard ANSI colors: black, red, green, yellow, blue, magenta, cyan, white
+
+# Set foreground color (0-7)
+# 0=black, 1=red, 2=green, 3=yellow, 4=blue, 5=magenta, 6=cyan, 7=white
+╭─ fg : I → ()
+│  ◇io
+╰─ print (strConcat (strConcat "\x1b[" (toString (30 + ₀))) "m")
+
+# Set background color (0-7)
+╭─ bg : I → ()
+│  ◇io
+╰─ print (strConcat (strConcat "\x1b[" (toString (40 + ₀))) "m")
+
+# Set bright foreground color (0-7)
+╭─ fgBright : I → ()
+│  ◇io
+╰─ print (strConcat (strConcat "\x1b[" (toString (90 + ₀))) "m")
+
+# Set bright background color (0-7)
+╭─ bgBright : I → ()
+│  ◇io
+╰─ print (strConcat (strConcat "\x1b[" (toString (100 + ₀))) "m")
+
+# Named foreground colors
+╭─ fgBlack : () → ()
+│  ◇io
+╰─ print "\x1b[30m"
+
+╭─ fgRed : () → ()
+│  ◇io
+╰─ print "\x1b[31m"
+
+╭─ fgGreen : () → ()
+│  ◇io
+╰─ print "\x1b[32m"
+
+╭─ fgYellow : () → ()
+│  ◇io
+╰─ print "\x1b[33m"
+
+╭─ fgBlue : () → ()
+│  ◇io
+╰─ print "\x1b[34m"
+
+╭─ fgMagenta : () → ()
+│  ◇io
+╰─ print "\x1b[35m"
+
+╭─ fgCyan : () → ()
+│  ◇io
+╰─ print "\x1b[36m"
+
+╭─ fgWhite : () → ()
+│  ◇io
+╰─ print "\x1b[37m"
+
+# Named background colors
+╭─ bgBlack : () → ()
+│  ◇io
+╰─ print "\x1b[40m"
+
+╭─ bgRed : () → ()
+│  ◇io
+╰─ print "\x1b[41m"
+
+╭─ bgGreen : () → ()
+│  ◇io
+╰─ print "\x1b[42m"
+
+╭─ bgYellow : () → ()
+│  ◇io
+╰─ print "\x1b[43m"
+
+╭─ bgBlue : () → ()
+│  ◇io
+╰─ print "\x1b[44m"
+
+╭─ bgMagenta : () → ()
+│  ◇io
+╰─ print "\x1b[45m"
+
+╭─ bgCyan : () → ()
+│  ◇io
+╰─ print "\x1b[46m"
+
+╭─ bgWhite : () → ()
+│  ◇io
+╰─ print "\x1b[47m"
+
+# ============ 256-Color Mode ============
+
+# Set foreground to 256-color palette (0-255)
+╭─ fg256 : I → ()
+│  ◇io
+╰─ print (strConcat (strConcat "\x1b[38;5;" (toString ₀)) "m")
+
+# Set background to 256-color palette (0-255)
+╭─ bg256 : I → ()
+│  ◇io
+╰─ print (strConcat (strConcat "\x1b[48;5;" (toString ₀)) "m")
+
+# ============ RGB True Color ============
+
+# Set foreground to RGB color (r, g, b each 0-255)
+╭─ fgRgb : I → I → I → ()
+│  ◇io
+╰─ print (strConcat (strConcat (strConcat (strConcat (strConcat (strConcat "\x1b[38;2;" (toString ₂)) ";") (toString ₁)) ";") (toString ₀)) "m")
+
+# Set background to RGB color (r, g, b each 0-255)
+╭─ bgRgb : I → I → I → ()
+│  ◇io
+╰─ print (strConcat (strConcat (strConcat (strConcat (strConcat (strConcat "\x1b[48;2;" (toString ₂)) ";") (toString ₁)) ";") (toString ₀)) "m")
+
+# ============ Drawing Characters ============
+# Box-drawing characters for TUI borders
+
+let boxHorizontal = "─"
+let boxVertical = "│"
+let boxTopLeft = "┌"
+let boxTopRight = "┐"
+let boxBottomLeft = "└"
+let boxBottomRight = "┘"
+let boxCross = "┼"
+let boxTeeDown = "┬"
+let boxTeeUp = "┴"
+let boxTeeRight = "├"
+let boxTeeLeft = "┤"
+
+# Double-line box characters
+let boxHorizontal2 = "═"
+let boxVertical2 = "║"
+let boxTopLeft2 = "╔"
+let boxTopRight2 = "╗"
+let boxBottomLeft2 = "╚"
+let boxBottomRight2 = "╝"
+
+# Block characters for graphics
+let blockFull = "█"
+let blockLight = "░"
+let blockMedium = "▒"
+let blockDark = "▓"
+let blockUpper = "▀"
+let blockLower = "▄"
+let blockLeft = "▌"
+let blockRight = "▐"
+
+# ============ Utility Functions ============
+
+# Print a character at a specific position (row, col, char)
+╭─ printAt : I → I → String → ()
+│  ◇io
+╰─ print (strConcat (strConcat (strConcat (strConcat (strConcat "\x1b[" (toString ₂)) ";") (toString ₁)) "H") ₀)
+
+# Print text with a specific foreground color (color 0-7, text)
+╭─ printColored : I → String → ()
+│  ◇io
+╰─ print (strConcat (strConcat (strConcat (strConcat "\x1b[" (toString (30 + ₁))) "m") ₀) "\x1b[0m")
+
+# Draw a horizontal line at position (row, col, length, char)
+╭─ hline : I → I → I → String → ()
+│  ◇io
+╰─ let row = ₃ in
+   let col = ₂ in
+   let len = ₁ in
+   let ch = ₀ in
+   let _ = cursorTo row col in
+   print (joinStrings (replicate len ch))
+
+# Draw a vertical line at position (row, col, length, char)
+# Note: This requires multiple cursor movements
+╭─ vline : I → I → I → String → ()
+│  ◇io
+╰─ let row = ₃ in
+   let col = ₂ in
+   let len = ₁ in
+   let ch = ₀ in
+   if len = 0 then ⟨⟩
+   else let _ = printAt row col ch in
+        vline (row + 1) col (len - 1) ch

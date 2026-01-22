@@ -711,6 +711,80 @@ pub fn primitive_type(name: &str) -> Option<Type> {
                 Type::Prim(PrimType::Bool),
             ))
         }
+        // String concatenation
+        "strConcat" | "⧺" => {
+            // String → String → String (concatenate two strings)
+            Some(Type::func_n(
+                [
+                    Type::Tensor(Shape(vec![Dim::Var("n".into())]), Box::new(Type::Prim(PrimType::Char))),
+                    Type::Tensor(Shape(vec![Dim::Var("m".into())]), Box::new(Type::Prim(PrimType::Char))),
+                ],
+                Type::Tensor(Shape(vec![Dim::Var("p".into())]), Box::new(Type::Prim(PrimType::Char))),
+            ))
+        }
+        // Replicate: create an array of n copies of a value
+        "replicate" => {
+            // ∀α. I64 → α → [n]α
+            Some(Type::Forall(
+                vec![TypeParam { name: "α".into(), kind: TypeParamKind::Type }],
+                Box::new(Type::func_n(
+                    [Type::Prim(PrimType::I64), Type::Var("α".into())],
+                    Type::Tensor(Shape(vec![Dim::Var("n".into())]), Box::new(Type::Var("α".into()))),
+                )),
+            ))
+        }
+        // Shape query
+        "shape" => {
+            // ∀n α. [n]α → [1]I64 (get shape as array)
+            Some(Type::Forall(
+                vec![
+                    TypeParam { name: "n".into(), kind: TypeParamKind::Shape },
+                    TypeParam { name: "α".into(), kind: TypeParamKind::Type },
+                ],
+                Box::new(Type::func(
+                    Type::Tensor(Shape(vec![Dim::Var("n".into())]), Box::new(Type::Var("α".into()))),
+                    Type::Tensor(Shape(vec![Dim::constant(1)]), Box::new(Type::Prim(PrimType::I64))),
+                )),
+            ))
+        }
+        // Index into array
+        "index" => {
+            // ∀n α. [n]α → I64 → α (get element at index)
+            Some(Type::Forall(
+                vec![
+                    TypeParam { name: "n".into(), kind: TypeParamKind::Shape },
+                    TypeParam { name: "α".into(), kind: TypeParamKind::Type },
+                ],
+                Box::new(Type::func_n(
+                    [
+                        Type::Tensor(Shape(vec![Dim::Var("n".into())]), Box::new(Type::Var("α".into()))),
+                        Type::Prim(PrimType::I64),
+                    ],
+                    Type::Var("α".into()),
+                )),
+            ))
+        }
+        // Zip two arrays
+        "zip" => {
+            // ∀n α β. [n]α → [n]β → [n]⟨α, β⟩
+            Some(Type::Forall(
+                vec![
+                    TypeParam { name: "n".into(), kind: TypeParamKind::Shape },
+                    TypeParam { name: "α".into(), kind: TypeParamKind::Type },
+                    TypeParam { name: "β".into(), kind: TypeParamKind::Type },
+                ],
+                Box::new(Type::func_n(
+                    [
+                        Type::Tensor(Shape(vec![Dim::Var("n".into())]), Box::new(Type::Var("α".into()))),
+                        Type::Tensor(Shape(vec![Dim::Var("n".into())]), Box::new(Type::Var("β".into()))),
+                    ],
+                    Type::Tensor(
+                        Shape(vec![Dim::Var("n".into())]),
+                        Box::new(Type::tuple(vec![Type::Var("α".into()), Type::Var("β".into())])),
+                    ),
+                )),
+            ))
+        }
         _ => None,
     }
 }

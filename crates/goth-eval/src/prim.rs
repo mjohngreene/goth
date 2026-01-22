@@ -76,7 +76,20 @@ pub fn apply_prim(prim: PrimFn, args: Vec<Value>) -> EvalResult<Value> {
         PrimFn::ToInt => unary_args(&args, to_int), PrimFn::ToFloat => unary_args(&args, to_float),
         PrimFn::ToBool => unary_args(&args, to_bool), PrimFn::ToChar => unary_args(&args, to_char),
         PrimFn::ParseInt => unary_args(&args, parse_int), PrimFn::ParseFloat => unary_args(&args, parse_float),
-        PrimFn::Print => { for arg in &args { println!("{}", arg); } Ok(Value::Unit) }
+        PrimFn::Print => {
+            for arg in &args {
+                // Print strings without quotes for raw output
+                if let Value::Tensor(t) = arg {
+                    if let Some(s) = t.to_string_value() {
+                        print!("{}", s);
+                        continue;
+                    }
+                }
+                print!("{}", arg);
+            }
+            println!();
+            Ok(Value::Unit)
+        }
         PrimFn::ReadLine => {
             use std::io::{self, BufRead};
             let mut line = String::new();
