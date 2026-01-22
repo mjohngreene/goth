@@ -11,6 +11,15 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::HashMap;
 
+/// Represents either a final value or a tail call that needs to be evaluated.
+/// Used for tail call optimization (TCO) to avoid stack overflow on deep recursion.
+enum TcoResult {
+    /// Evaluation is complete with this value
+    Done(Value),
+    /// A tail call that needs to be trampolined (closure body + environment)
+    TailCall { body: Expr, env: Env },
+}
+
 pub struct Evaluator {
     globals: Rc<RefCell<HashMap<String, Value>>>,
     max_depth: usize,
@@ -149,54 +158,54 @@ impl Evaluator {
         }
     }
 
+    /// Main apply function with trampoline for tail call optimization.
+    /// This prevents stack overflow on deeply recursive tail calls.
     fn apply(&mut self, func: Value, arg: Value) -> EvalResult<Value> {
+        // Use trampoline: loop instead of recurse for tail calls
+        let mut tco_result = self.apply_once(func, arg)?;
+
+        loop {
+            match tco_result {
+                TcoResult::Done(value) => return Ok(value),
+                TcoResult::TailCall { body, env } => {
+                    // Check depth limit (logical recursion depth)
+                    self.depth += 1;
+                    if self.depth > self.max_depth {
+                        self.depth -= 1;
+                        return Err(EvalError::Internal("Recursion limit exceeded".into()));
+                    }
+
+                    // Evaluate in tail position - may return another TailCall
+                    tco_result = self.eval_tail(&body, &env)?;
+                    self.depth -= 1;
+                }
+            }
+        }
+    }
+
+    /// Single step of application that may return a tail call for trampolining.
+    fn apply_once(&mut self, func: Value, arg: Value) -> EvalResult<TcoResult> {
         match func {
             Value::Closure(closure) => {
                 if closure.arity == 1 {
                     let mut new_env = closure.env.clone();
                     new_env.push(arg.clone());
-                    
+
                     // Check preconditions (argument bound as ₀)
-                    for (i, pre) in closure.preconditions.iter().enumerate() {
-                        let pre_result = self.eval_with_env(pre, &new_env)?;
-                        match pre_result {
-                            Value::Bool(true) => {},
-                            Value::Bool(false) => {
-                                return Err(EvalError::PreconditionViolated(
-                                    format!("precondition #{} failed", i + 1)
-                                ));
-                            }
-                            _ => {
-                                return Err(EvalError::type_error("Bool", &pre_result));
-                            }
-                        }
+                    self.check_preconditions(&closure.preconditions, &new_env)?;
+
+                    // Return tail call for trampoline (postconditions checked after body eval)
+                    if closure.postconditions.is_empty() {
+                        Ok(TcoResult::TailCall { body: closure.body, env: new_env })
+                    } else {
+                        // Has postconditions - evaluate now and check them
+                        let result = self.eval_with_env(&closure.body, &new_env)?;
+                        self.check_postconditions(&closure.postconditions, &new_env, &result)?;
+                        Ok(TcoResult::Done(result))
                     }
-                    
-                    // Evaluate body
-                    let result = self.eval_with_env(&closure.body, &new_env)?;
-                    
-                    // Check postconditions (result bound as ₀, argument shifts to ₁)
-                    for (i, post) in closure.postconditions.iter().enumerate() {
-                        let mut post_env = new_env.clone();
-                        post_env.push(result.clone());
-                        let post_result = self.eval_with_env(post, &post_env)?;
-                        match post_result {
-                            Value::Bool(true) => {},
-                            Value::Bool(false) => {
-                                return Err(EvalError::PostconditionViolated(
-                                    format!("postcondition #{} failed", i + 1)
-                                ));
-                            }
-                            _ => {
-                                return Err(EvalError::type_error("Bool", &post_result));
-                            }
-                        }
-                    }
-                    
-                    Ok(result)
                 } else {
                     let remaining = (closure.arity - 1) as usize;
-                    Ok(Value::Partial { func: Box::new(Value::Closure(closure)), args: vec![arg], remaining })
+                    Ok(TcoResult::Done(Value::Partial { func: Box::new(Value::Closure(closure)), args: vec![arg], remaining }))
                 }
             }
             Value::Partial { func, mut args, remaining } => {
@@ -205,69 +214,144 @@ impl Evaluator {
                     match *func {
                         Value::Closure(closure) => {
                             let mut new_env = closure.env.clone();
-                            // Push args in application order (first arg first, last arg last)
-                            // so that de Bruijn indices work correctly:
-                            // ₀ = last arg (most recent), ₁ = second-to-last, etc.
                             for a in &args {
                                 new_env.push(a.clone());
                             }
-                            
-                            // Check preconditions (all arguments bound as ₀, ₁, ...)
-                            for (i, pre) in closure.preconditions.iter().enumerate() {
-                                let pre_result = self.eval_with_env(pre, &new_env)?;
-                                match pre_result {
-                                    Value::Bool(true) => {},
-                                    Value::Bool(false) => {
-                                        return Err(EvalError::PreconditionViolated(
-                                            format!("precondition #{} failed", i + 1)
-                                        ));
-                                    }
-                                    _ => {
-                                        return Err(EvalError::type_error("Bool", &pre_result));
-                                    }
-                                }
+
+                            // Check preconditions
+                            self.check_preconditions(&closure.preconditions, &new_env)?;
+
+                            // Return tail call for trampoline (postconditions checked after)
+                            if closure.postconditions.is_empty() {
+                                Ok(TcoResult::TailCall { body: closure.body, env: new_env })
+                            } else {
+                                let result = self.eval_with_env(&closure.body, &new_env)?;
+                                self.check_postconditions(&closure.postconditions, &new_env, &result)?;
+                                Ok(TcoResult::Done(result))
                             }
-                            
-                            // Evaluate body
-                            let result = self.eval_with_env(&closure.body, &new_env)?;
-                            
-                            // Check postconditions (result as ₀, args shift)
-                            for (i, post) in closure.postconditions.iter().enumerate() {
-                                let mut post_env = new_env.clone();
-                                post_env.push(result.clone());
-                                let post_result = self.eval_with_env(post, &post_env)?;
-                                match post_result {
-                                    Value::Bool(true) => {},
-                                    Value::Bool(false) => {
-                                        return Err(EvalError::PostconditionViolated(
-                                            format!("postcondition #{} failed", i + 1)
-                                        ));
-                                    }
-                                    _ => {
-                                        return Err(EvalError::type_error("Bool", &post_result));
-                                    }
-                                }
-                            }
-                            
-                            Ok(result)
                         }
-                        Value::Primitive(prim) => prim::apply_prim(prim, args),
+                        Value::Primitive(prim) => Ok(TcoResult::Done(prim::apply_prim(prim, args)?)),
                         _ => Err(EvalError::type_error("function", &func)),
                     }
                 } else {
-                    Ok(Value::Partial { func, args, remaining: remaining - 1 })
+                    Ok(TcoResult::Done(Value::Partial { func, args, remaining: remaining - 1 }))
                 }
             }
             Value::Primitive(prim) => {
                 let arity = prim_arity(prim);
                 if arity == 1 {
-                    prim::apply_prim(prim, vec![arg])
+                    Ok(TcoResult::Done(prim::apply_prim(prim, vec![arg])?))
                 } else {
-                    Ok(Value::Partial { func: Box::new(Value::Primitive(prim)), args: vec![arg], remaining: arity - 1 })
+                    Ok(TcoResult::Done(Value::Partial { func: Box::new(Value::Primitive(prim)), args: vec![arg], remaining: arity - 1 }))
                 }
             }
             _ => Err(EvalError::type_error("function", &func)),
         }
+    }
+
+    /// Check preconditions for a closure
+    fn check_preconditions(&mut self, preconditions: &[Expr], env: &Env) -> EvalResult<()> {
+        for (i, pre) in preconditions.iter().enumerate() {
+            let pre_result = self.eval_with_env(pre, env)?;
+            match pre_result {
+                Value::Bool(true) => {},
+                Value::Bool(false) => {
+                    return Err(EvalError::PreconditionViolated(format!("precondition #{} failed", i + 1)));
+                }
+                _ => {
+                    return Err(EvalError::type_error("Bool", &pre_result));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Check postconditions for a closure
+    fn check_postconditions(&mut self, postconditions: &[Expr], env: &Env, result: &Value) -> EvalResult<()> {
+        for (i, post) in postconditions.iter().enumerate() {
+            let mut post_env = env.clone();
+            post_env.push(result.clone());
+            let post_result = self.eval_with_env(post, &post_env)?;
+            match post_result {
+                Value::Bool(true) => {},
+                Value::Bool(false) => {
+                    return Err(EvalError::PostconditionViolated(format!("postcondition #{} failed", i + 1)));
+                }
+                _ => {
+                    return Err(EvalError::type_error("Bool", &post_result));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Evaluate an expression in tail position, returning TcoResult.
+    /// This enables proper tail call optimization for recursive functions.
+    fn eval_tail(&mut self, expr: &Expr, env: &Env) -> EvalResult<TcoResult> {
+        match expr {
+            // If: both branches are in tail position
+            Expr::If { cond, then_, else_ } => {
+                let cond_val = self.eval_with_env(cond, env)?;
+                match cond_val {
+                    Value::Bool(true) => self.eval_tail(then_, env),
+                    Value::Bool(false) => self.eval_tail(else_, env),
+                    _ => Err(EvalError::type_error("Bool", &cond_val))
+                }
+            }
+            // Let: body is in tail position
+            Expr::Let { pattern, value, body } => {
+                let val = self.eval_with_env(value, env)?;
+                let mut new_env = env.clone();
+                self.bind_pattern(pattern, val, &mut new_env)?;
+                self.eval_tail(body, &new_env)
+            }
+            // LetRec: body is in tail position
+            Expr::LetRec { bindings, body } => {
+                let mut new_env = env.clone();
+                for _ in bindings { new_env.push(Value::Error("uninitialized letrec".into())); }
+                let values: Vec<Value> = bindings.iter()
+                    .map(|(_, expr)| self.eval_with_env(expr, &new_env))
+                    .collect::<Result<_, _>>()?;
+                let depth = new_env.depth();
+                for (i, val) in values.into_iter().enumerate() {
+                    let idx = depth - bindings.len() + i;
+                    if let Some(slot) = new_env.values.get_mut(idx) { *slot = val; }
+                }
+                self.eval_tail(body, &new_env)
+            }
+            // Match: each arm body is in tail position
+            Expr::Match { scrutinee, arms } => {
+                let val = self.eval_with_env(scrutinee, env)?;
+                self.eval_match_tail(val, arms, env)
+            }
+            // Application: this IS the tail call - return for trampolining
+            Expr::App(func, arg) => {
+                let func_val = self.eval_with_env(func, env)?;
+                let arg_val = self.eval_with_env(arg, env)?;
+                self.apply_once(func_val, arg_val)
+            }
+            // Everything else: not a tail call, evaluate normally and wrap
+            _ => Ok(TcoResult::Done(self.eval_with_env(expr, env)?))
+        }
+    }
+
+    /// Pattern match with tail call optimization for arm bodies
+    fn eval_match_tail(&mut self, val: Value, arms: &[MatchArm], env: &Env) -> EvalResult<TcoResult> {
+        for arm in arms {
+            let mut new_env = env.clone();
+            if self.match_pattern(&arm.pattern, &val, &mut new_env)? {
+                if let Some(guard) = &arm.guard {
+                    let guard_val = self.eval_with_env(guard, &new_env)?;
+                    match guard_val {
+                        Value::Bool(true) => {}
+                        Value::Bool(false) => continue,
+                        _ => return Err(EvalError::type_error("Bool", &guard_val))
+                    }
+                }
+                return self.eval_tail(&arm.body, &new_env);
+            }
+        }
+        Err(EvalError::NonExhaustiveMatch)
     }
 
     fn eval_match(&mut self, val: Value, arms: &[MatchArm], env: &Env) -> EvalResult<Value> {
