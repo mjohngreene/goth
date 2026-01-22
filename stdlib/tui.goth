@@ -1,0 +1,412 @@
+# Goth Standard Library - TUI (Terminal User Interface)
+# ANSI escape code primitives for terminal graphics
+#
+# Usage: use "stdlib/tui.goth"
+#
+# These functions output ANSI escape sequences that work in
+# most modern terminals (xterm, iTerm2, Windows Terminal, etc.)
+#
+# Note: For sequencing multiple I/O operations, use let _ = op1 in op2
+#
+# New in this version:
+# - Uses `write` instead of `print` (no automatic newline)
+# - Raw mode support for single-key input (rawModeEnter/rawModeExit)
+# - Single key reading with readKey
+# - Sleep function for animation timing
+
+use "string.goth"
+use "prelude.goth"
+
+# ============ ANSI Escape Sequences ============
+# The escape character (ESC = 0x1B)
+let esc = "\x1b"
+
+# Control Sequence Introducer (CSI = ESC[)
+let csi = "\x1b["
+
+# ============ Cursor Movement ============
+
+# Move cursor to home position (1,1)
+╭─ cursorHome : () → ()
+│  ◇io
+╰─ write "\x1b[H"
+
+# Move cursor to specific position (row, col) - 1-indexed
+╭─ cursorTo : I → I → ()
+│  ◇io
+╰─ write (strConcat (strConcat (strConcat (strConcat "\x1b[" (toString ₁)) ";") (toString ₀)) "H")
+
+# Move cursor up n lines
+╭─ cursorUp : I → ()
+│  ◇io
+╰─ write (strConcat (strConcat "\x1b[" (toString ₀)) "A")
+
+# Move cursor down n lines
+╭─ cursorDown : I → ()
+│  ◇io
+╰─ write (strConcat (strConcat "\x1b[" (toString ₀)) "B")
+
+# Move cursor right n columns
+╭─ cursorRight : I → ()
+│  ◇io
+╰─ write (strConcat (strConcat "\x1b[" (toString ₀)) "C")
+
+# Move cursor left n columns
+╭─ cursorLeft : I → ()
+│  ◇io
+╰─ write (strConcat (strConcat "\x1b[" (toString ₀)) "D")
+
+# Save cursor position
+╭─ cursorSave : () → ()
+│  ◇io
+╰─ write "\x1b[s"
+
+# Restore cursor position
+╭─ cursorRestore : () → ()
+│  ◇io
+╰─ write "\x1b[u"
+
+# Hide cursor
+╭─ cursorHide : () → ()
+│  ◇io
+╰─ write "\x1b[?25l"
+
+# Show cursor
+╭─ cursorShow : () → ()
+│  ◇io
+╰─ write "\x1b[?25h"
+
+# ============ Screen Clearing ============
+
+# Clear entire screen
+╭─ clearScreen : () → ()
+│  ◇io
+╰─ write "\x1b[2J"
+
+# Clear screen and move cursor home
+╭─ clear : () → ()
+│  ◇io
+╰─ write "\x1b[2J\x1b[H"
+
+# Clear from cursor to end of screen
+╭─ clearToEnd : () → ()
+│  ◇io
+╰─ write "\x1b[J"
+
+# Clear from cursor to end of line
+╭─ clearLine : () → ()
+│  ◇io
+╰─ write "\x1b[K"
+
+# Clear entire line
+╭─ clearEntireLine : () → ()
+│  ◇io
+╰─ write "\x1b[2K"
+
+# ============ Alternate Screen Buffer ============
+# Use alternate screen to preserve terminal contents
+
+# Enter alternate screen buffer (like vim/less)
+╭─ altScreenEnter : () → ()
+│  ◇io
+╰─ write "\x1b[?1049h"
+
+# Exit alternate screen buffer (restore original contents)
+╭─ altScreenExit : () → ()
+│  ◇io
+╰─ write "\x1b[?1049l"
+
+# ============ Text Attributes ============
+
+# Reset all attributes
+╭─ resetStyle : () → ()
+│  ◇io
+╰─ write "\x1b[0m"
+
+# Bold text
+╭─ bold : () → ()
+│  ◇io
+╰─ write "\x1b[1m"
+
+# Dim text
+╭─ dim : () → ()
+│  ◇io
+╰─ write "\x1b[2m"
+
+# Italic text
+╭─ italic : () → ()
+│  ◇io
+╰─ write "\x1b[3m"
+
+# Underline text
+╭─ underline : () → ()
+│  ◇io
+╰─ write "\x1b[4m"
+
+# Blink text
+╭─ blink : () → ()
+│  ◇io
+╰─ write "\x1b[5m"
+
+# Reverse video (swap fg/bg)
+╭─ reverse : () → ()
+│  ◇io
+╰─ write "\x1b[7m"
+
+# ============ Basic Colors (0-7) ============
+# Standard ANSI colors: black, red, green, yellow, blue, magenta, cyan, white
+
+# Set foreground color (0-7)
+# 0=black, 1=red, 2=green, 3=yellow, 4=blue, 5=magenta, 6=cyan, 7=white
+╭─ fg : I → ()
+│  ◇io
+╰─ write (strConcat (strConcat "\x1b[" (toString (30 + ₀))) "m")
+
+# Set background color (0-7)
+╭─ bg : I → ()
+│  ◇io
+╰─ write (strConcat (strConcat "\x1b[" (toString (40 + ₀))) "m")
+
+# Set bright foreground color (0-7)
+╭─ fgBright : I → ()
+│  ◇io
+╰─ write (strConcat (strConcat "\x1b[" (toString (90 + ₀))) "m")
+
+# Set bright background color (0-7)
+╭─ bgBright : I → ()
+│  ◇io
+╰─ write (strConcat (strConcat "\x1b[" (toString (100 + ₀))) "m")
+
+# Named foreground colors
+╭─ fgBlack : () → ()
+│  ◇io
+╰─ write "\x1b[30m"
+
+╭─ fgRed : () → ()
+│  ◇io
+╰─ write "\x1b[31m"
+
+╭─ fgGreen : () → ()
+│  ◇io
+╰─ write "\x1b[32m"
+
+╭─ fgYellow : () → ()
+│  ◇io
+╰─ write "\x1b[33m"
+
+╭─ fgBlue : () → ()
+│  ◇io
+╰─ write "\x1b[34m"
+
+╭─ fgMagenta : () → ()
+│  ◇io
+╰─ write "\x1b[35m"
+
+╭─ fgCyan : () → ()
+│  ◇io
+╰─ write "\x1b[36m"
+
+╭─ fgWhite : () → ()
+│  ◇io
+╰─ write "\x1b[37m"
+
+# Named background colors
+╭─ bgBlack : () → ()
+│  ◇io
+╰─ write "\x1b[40m"
+
+╭─ bgRed : () → ()
+│  ◇io
+╰─ write "\x1b[41m"
+
+╭─ bgGreen : () → ()
+│  ◇io
+╰─ write "\x1b[42m"
+
+╭─ bgYellow : () → ()
+│  ◇io
+╰─ write "\x1b[43m"
+
+╭─ bgBlue : () → ()
+│  ◇io
+╰─ write "\x1b[44m"
+
+╭─ bgMagenta : () → ()
+│  ◇io
+╰─ write "\x1b[45m"
+
+╭─ bgCyan : () → ()
+│  ◇io
+╰─ write "\x1b[46m"
+
+╭─ bgWhite : () → ()
+│  ◇io
+╰─ write "\x1b[47m"
+
+# ============ 256-Color Mode ============
+
+# Set foreground to 256-color palette (0-255)
+╭─ fg256 : I → ()
+│  ◇io
+╰─ write (strConcat (strConcat "\x1b[38;5;" (toString ₀)) "m")
+
+# Set background to 256-color palette (0-255)
+╭─ bg256 : I → ()
+│  ◇io
+╰─ write (strConcat (strConcat "\x1b[48;5;" (toString ₀)) "m")
+
+# ============ RGB True Color ============
+
+# Set foreground to RGB color (r, g, b each 0-255)
+╭─ fgRgb : I → I → I → ()
+│  ◇io
+╰─ write (strConcat (strConcat (strConcat (strConcat (strConcat (strConcat "\x1b[38;2;" (toString ₂)) ";") (toString ₁)) ";") (toString ₀)) "m")
+
+# Set background to RGB color (r, g, b each 0-255)
+╭─ bgRgb : I → I → I → ()
+│  ◇io
+╰─ write (strConcat (strConcat (strConcat (strConcat (strConcat (strConcat "\x1b[48;2;" (toString ₂)) ";") (toString ₁)) ";") (toString ₀)) "m")
+
+# ============ Drawing Characters ============
+# Box-drawing characters for TUI borders
+
+let boxHorizontal = "─"
+let boxVertical = "│"
+let boxTopLeft = "┌"
+let boxTopRight = "┐"
+let boxBottomLeft = "└"
+let boxBottomRight = "┘"
+let boxCross = "┼"
+let boxTeeDown = "┬"
+let boxTeeUp = "┴"
+let boxTeeRight = "├"
+let boxTeeLeft = "┤"
+
+# Double-line box characters
+let boxHorizontal2 = "═"
+let boxVertical2 = "║"
+let boxTopLeft2 = "╔"
+let boxTopRight2 = "╗"
+let boxBottomLeft2 = "╚"
+let boxBottomRight2 = "╝"
+
+# Block characters for graphics
+let blockFull = "█"
+let blockLight = "░"
+let blockMedium = "▒"
+let blockDark = "▓"
+let blockUpper = "▀"
+let blockLower = "▄"
+let blockLeft = "▌"
+let blockRight = "▐"
+
+# ============ Key Codes ============
+# Common key codes returned by readKey
+
+let keyEscape = 27
+let keyEnter = 13
+let keyNewline = 10       # Some terminals send LF instead of CR for Enter
+let keyBackspace = 127
+let keyTab = 9
+let keySpace = 32
+
+# Arrow keys (after reading escape sequence)
+# When in raw mode, arrow keys send: ESC [ A/B/C/D
+let keyUp = 65      # 'A'
+let keyDown = 66    # 'B'
+let keyRight = 67   # 'C'
+let keyLeft = 68    # 'D'
+
+# ============ Utility Functions ============
+
+# Print a character at a specific position (row, col, char)
+╭─ printAt : I → I → String → ()
+│  ◇io
+╰─ write (strConcat (strConcat (strConcat (strConcat (strConcat "\x1b[" (toString ₂)) ";") (toString ₁)) "H") ₀)
+
+# Print text with a specific foreground color (color 0-7, text)
+╭─ printColored : I → String → ()
+│  ◇io
+╰─ write (strConcat (strConcat (strConcat (strConcat "\x1b[" (toString (30 + ₁))) "m") ₀) "\x1b[0m")
+
+# Draw a horizontal line at position (row, col, length, char)
+# 4 args: capture all from ₃ as indices shift
+╭─ hline : I → I → I → String → ()
+│  ◇io
+╰─ let row = ₃ in
+   let col = ₃ in
+   let len = ₃ in
+   let ch = ₃ in
+   let _ = cursorTo row col in
+   write (joinStrings (replicate len ch))
+
+# Draw a vertical line at position (row, col, length, char)
+# 4 args: capture all from ₃ as indices shift
+╭─ vline : I → I → I → String → ()
+│  ◇io
+╰─ let row = ₃ in
+   let col = ₃ in
+   let len = ₃ in
+   let ch = ₃ in
+   if len = 0 then ⟨⟩
+   else let _ = printAt row col ch in
+        vline (row + 1) col (len - 1) ch
+
+# ============ Terminal Mode Control ============
+
+# Enter raw mode for single-key input
+# In raw mode:
+# - Input is not line-buffered (keys arrive immediately)
+# - Characters are not echoed to the terminal
+# - Call rawModeExit to restore normal terminal behavior
+╭─ tuiEnter : () → ()
+│  ◇io
+╰─ let _ = rawModeEnter ⟨⟩ in
+   let _ = cursorHide ⟨⟩ in
+   altScreenEnter ⟨⟩
+
+# Exit raw mode and restore terminal
+╭─ tuiExit : () → ()
+│  ◇io
+╰─ let _ = altScreenExit ⟨⟩ in
+   let _ = cursorShow ⟨⟩ in
+   rawModeExit ⟨⟩
+
+# Read a single key and return its code
+# Returns integer key code (ASCII value or special key code)
+# Note: For arrow keys/special keys, may need to read multiple bytes
+╭─ getKey : () → I
+│  ◇io
+╰─ readKey ⟨⟩
+
+# Check if key is an escape sequence start (for arrow keys, etc.)
+╭─ isEscapeSeq : I → Bool
+╰─ ₀ = 27
+
+# Read arrow key after escape sequence
+# Call this after getKey returns 27 (escape)
+# Returns the direction key code (A=up, B=down, C=right, D=left)
+╭─ readArrowKey : () → I
+│  ◇io
+╰─ let _ = readKey ⟨⟩ in   # Skip the '[' character
+   readKey ⟨⟩              # Return the direction code
+
+# Sleep for specified milliseconds
+╭─ delay : I → ()
+│  ◇io
+╰─ sleep ₀
+
+# ============ Event Loop Pattern ============
+# To create an event loop in your application, use a recursive function:
+#
+# ╭─ eventLoop : YourState → ()
+# │  ◇io
+# ╰─ let state = ₀ in
+#    let _ = render state in
+#    let key = getKey ⟨⟩ in
+#    let newState = handleKey key state in
+#    if shouldContinue newState then
+#      eventLoop newState
+#    else ⟨⟩
+#
+# See examples/number_analyzer.goth for a complete example.

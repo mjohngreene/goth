@@ -22,10 +22,11 @@
   }
 
 # Repeat a string n times
+# After pattern 'n' binds, indices shift: String is at ₂, count was at ₁ but now n is at ₀
 ╭─ repeatStr : String → ℤ → String
 ╰─ match ₀ {
     0 → "";
-    n → strConcat ₁ (repeatStr ₁ (n - 1))
+    n → strConcat ₂ (repeatStr ₂ (n - 1))
   }
 
 # Convert integer to string (uses toString primitive)
@@ -39,3 +40,16 @@
 # Convert bool to string
 ╭─ boolToStr : Bool → String
 ╰─ if ₀ then "true" else "false"
+
+# Take first n characters of a string (helper)
+# Args: count, char array. Returns String.
+╭─ strTakeHelper : I → [n]Char → String
+╰─ match len ₀ {
+     0 → "";
+     _ → if ₁ < 1 then ""
+         else strConcat (toString (₀[0])) (strTakeHelper (₁ - 1) (drop 1 ₀))
+   }
+
+# Take first n characters of a string
+╭─ strTake : I → String → String
+╰─ strTakeHelper ₁ (chars ₀)

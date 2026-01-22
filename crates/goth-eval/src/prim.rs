@@ -4,6 +4,10 @@ use crate::value::{Value, Tensor, PrimFn};
 use crate::error::{EvalError, EvalResult};
 use ordered_float::OrderedFloat;
 
+// Store original terminal settings for raw mode restoration
+#[cfg(unix)]
+static mut ORIGINAL_TERMIOS: Option<libc::termios> = None;
+
 pub fn apply_binop(op: &goth_ast::op::BinOp, left: Value, right: Value) -> EvalResult<Value> {
     use goth_ast::op::BinOp::*;
     match op {
@@ -76,7 +80,40 @@ pub fn apply_prim(prim: PrimFn, args: Vec<Value>) -> EvalResult<Value> {
         PrimFn::ToInt => unary_args(&args, to_int), PrimFn::ToFloat => unary_args(&args, to_float),
         PrimFn::ToBool => unary_args(&args, to_bool), PrimFn::ToChar => unary_args(&args, to_char),
         PrimFn::ParseInt => unary_args(&args, parse_int), PrimFn::ParseFloat => unary_args(&args, parse_float),
-        PrimFn::Print => { for arg in &args { println!("{}", arg); } Ok(Value::Unit) }
+        PrimFn::Print => {
+            for arg in &args {
+                // Print strings without quotes for raw output
+                if let Value::Tensor(t) = arg {
+                    if let Some(s) = t.to_string_value() {
+                        print!("{}", s);
+                        continue;
+                    }
+                }
+                print!("{}", arg);
+            }
+            println!();
+            Ok(Value::Unit)
+        }
+        PrimFn::Write => {
+            use std::io::Write;
+            for arg in &args {
+                // Write strings without quotes for raw output (no trailing newline)
+                if let Value::Tensor(t) = arg {
+                    if let Some(s) = t.to_string_value() {
+                        print!("{}", s);
+                        continue;
+                    }
+                }
+                print!("{}", arg);
+            }
+            std::io::stdout().flush().map_err(|e| EvalError::IoError(e.to_string()))?;
+            Ok(Value::Unit)
+        }
+        PrimFn::Flush => {
+            use std::io::Write;
+            std::io::stdout().flush().map_err(|e| EvalError::IoError(e.to_string()))?;
+            Ok(Value::Unit)
+        }
         PrimFn::ReadLine => {
             use std::io::{self, BufRead};
             let mut line = String::new();
@@ -89,6 +126,73 @@ pub fn apply_prim(prim: PrimFn, args: Vec<Value>) -> EvalResult<Value> {
                 }
             }
             Ok(Value::string(&line))
+        }
+        PrimFn::ReadKey => {
+            // Read a single character/byte from stdin (requires raw mode to be set)
+            use std::io::Read;
+            let mut buf = [0u8; 1];
+            match std::io::stdin().lock().read_exact(&mut buf) {
+                Ok(_) => Ok(Value::Int(buf[0] as i128)),
+                Err(e) => Err(EvalError::IoError(e.to_string())),
+            }
+        }
+        PrimFn::RawModeEnter => {
+            #[cfg(unix)]
+            {
+                use std::os::unix::io::AsRawFd;
+                let fd = std::io::stdin().as_raw_fd();
+                unsafe {
+                    let mut termios: libc::termios = std::mem::zeroed();
+                    if libc::tcgetattr(fd, &mut termios) != 0 {
+                        return Err(EvalError::IoError("Failed to get terminal attributes".to_string()));
+                    }
+                    // Save original termios for restoration
+                    ORIGINAL_TERMIOS = Some(termios);
+                    // Disable canonical mode and echo
+                    termios.c_lflag &= !(libc::ICANON | libc::ECHO);
+                    // Set minimum characters and timeout
+                    termios.c_cc[libc::VMIN] = 1;
+                    termios.c_cc[libc::VTIME] = 0;
+                    if libc::tcsetattr(fd, libc::TCSANOW, &termios) != 0 {
+                        return Err(EvalError::IoError("Failed to set terminal attributes".to_string()));
+                    }
+                }
+                Ok(Value::Unit)
+            }
+            #[cfg(not(unix))]
+            {
+                Err(EvalError::not_implemented("rawModeEnter only supported on Unix"))
+            }
+        }
+        PrimFn::RawModeExit => {
+            #[cfg(unix)]
+            {
+                use std::os::unix::io::AsRawFd;
+                let fd = std::io::stdin().as_raw_fd();
+                unsafe {
+                    if let Some(termios) = ORIGINAL_TERMIOS {
+                        if libc::tcsetattr(fd, libc::TCSANOW, &termios) != 0 {
+                            return Err(EvalError::IoError("Failed to restore terminal attributes".to_string()));
+                        }
+                        ORIGINAL_TERMIOS = None;
+                    }
+                }
+                Ok(Value::Unit)
+            }
+            #[cfg(not(unix))]
+            {
+                Err(EvalError::not_implemented("rawModeExit only supported on Unix"))
+            }
+        }
+        PrimFn::Sleep => {
+            if args.len() != 1 { return Err(EvalError::ArityMismatch { expected: 1, got: args.len() }); }
+            let ms = match &args[0] {
+                Value::Int(n) => *n as u64,
+                Value::Float(f) => f.0 as u64,
+                _ => return Err(EvalError::type_error("Int or Float", &args[0])),
+            };
+            std::thread::sleep(std::time::Duration::from_millis(ms));
+            Ok(Value::Unit)
         }
         PrimFn::ReadFile => {
             if args.len() != 1 { return Err(EvalError::ArityMismatch { expected: 1, got: args.len() }); }
@@ -518,7 +622,11 @@ fn range(start: Value, end: Value) -> EvalResult<Value> {
 
 /// toString: Convert any value to a string representation
 fn to_string(value: Value) -> EvalResult<Value> {
-    Ok(Value::string(&format!("{}", value)))
+    // Handle Char specially to avoid quotes (Display adds quotes for REPL)
+    match &value {
+        Value::Char(c) => Ok(Value::string(&c.to_string())),
+        _ => Ok(Value::string(&format!("{}", value))),
+    }
 }
 
 /// chars: Convert a string (char tensor) to an array of individual characters
@@ -568,6 +676,11 @@ fn take(n: Value, arr: Value) -> EvalResult<Value> {
             }
             let count = (*count).max(0) as usize;
             let count = count.min(t.len());
+            // Preserve string type when taking from strings
+            if let Some(s) = t.to_string_value() {
+                let taken: String = s.chars().take(count).collect();
+                return Ok(Value::string(&taken));
+            }
             let data: Vec<Value> = (0..count).map(|i| t.get_flat(i).unwrap()).collect();
             Ok(Value::Tensor(Tensor::from_values(vec![data.len()], data)))
         }
@@ -593,6 +706,11 @@ fn drop_fn(n: Value, arr: Value) -> EvalResult<Value> {
             }
             let count = (*count).max(0) as usize;
             let count = count.min(t.len());
+            // Preserve string type when dropping from strings
+            if let Some(s) = t.to_string_value() {
+                let dropped: String = s.chars().skip(count).collect();
+                return Ok(Value::string(&dropped));
+            }
             let data: Vec<Value> = (count..t.len()).map(|i| t.get_flat(i).unwrap()).collect();
             Ok(Value::Tensor(Tensor::from_values(vec![data.len()], data)))
         }

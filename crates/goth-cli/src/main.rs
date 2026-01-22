@@ -197,72 +197,64 @@ fn run_expr(source: &str, trace: bool, parse_only: bool, show_ast: bool, check: 
 }
 
 fn run_file(path: &PathBuf, trace: bool, parse_only: bool, show_ast: bool, no_main: bool, program_args: &[String], emit_mode: EmitMode) {
-    match fs::read_to_string(path) {
-        Ok(source) => {
-            let name = path.file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("main");
+    // Use the loader to handle `use` declarations (resolves imports)
+    match load_file(path) {
+        Ok(module) => {
+            if show_ast {
+                println!("{} {:#?}", "Parsed AST:".cyan().bold(), module);
+            }
+            if parse_only {
+                println!("{} module '{}' with {} declarations",
+                    "Parsed:".green().bold(),
+                    module.name.as_ref().map(|s| s.as_ref()).unwrap_or("anonymous"),
+                    module.decls.len());
+                return;
+            }
+            let module = resolve_module(module);
+            if show_ast {
+                println!("{} {:#?}", "Resolved AST:".cyan().bold(), module);
+            }
 
-            match parse_module(&source, name) {
-                Ok(module) => {
-                    if show_ast {
-                        println!("{} {:#?}", "Parsed AST:".cyan().bold(), module);
-                    }
-                    if parse_only {
-                        println!("{} module '{}' with {} declarations",
-                            "Parsed:".green().bold(),
-                            module.name.as_ref().map(|s| s.as_ref()).unwrap_or("anonymous"),
-                            module.decls.len());
-                        return;
-                    }
-                    let module = resolve_module(module);
-                    if show_ast {
-                        println!("{} {:#?}", "Resolved AST:".cyan().bold(), module);
-                    }
+            // Type check the module
+            let mut type_checker = TypeChecker::new();
+            if let Err(e) = type_checker.check_module(&module) {
+                eprintln!("{}: {}", "Type error".red().bold(), e);
+                return;
+            }
 
-                    // Type check the module
-                    let mut type_checker = TypeChecker::new();
-                    if let Err(e) = type_checker.check_module(&module) {
-                        eprintln!("{}: {}", "Type error".red().bold(), e);
-                        return;
+            // Handle emit modes for modules
+            match emit_mode {
+                EmitMode::Mir => {
+                    match goth_mir::lower_module(&module) {
+                        Ok(program) => println!("{}", program),
+                        Err(e) => eprintln!("{}: {:?}", "MIR lowering error".red().bold(), e),
                     }
-
-                    // Handle emit modes for modules
-                    match emit_mode {
-                        EmitMode::Mir => {
-                            match goth_mir::lower_module(&module) {
-                                Ok(program) => println!("{}", program),
-                                Err(e) => eprintln!("{}: {:?}", "MIR lowering error".red().bold(), e),
-                            }
-                            return;
-                        }
-                        EmitMode::Mlir => {
-                            match goth_mir::lower_module(&module) {
-                                Ok(mir_program) => {
-                                    match goth_mlir::emit_program(&mir_program) {
-                                        Ok(mlir) => println!("{}", mlir),
-                                        Err(e) => eprintln!("{}: {:?}", "MLIR emission error".red().bold(), e),
-                                    }
-                                }
-                                Err(e) => eprintln!("{}: {:?}", "MIR lowering error".red().bold(), e),
-                            }
-                            return;
-                        }
-                        EmitMode::Evaluate => {}
-                    }
-
-                    if no_main {
-                        // Just load declarations like before (verbose mode)
-                        run_module(&module, trace);
-                    } else {
-                        // Load declarations silently and execute main
-                        run_module_with_main(&module, trace, program_args);
-                    }
+                    return;
                 }
-                Err(e) => eprintln!("{}: {}", "Parse error".red().bold(), e),
+                EmitMode::Mlir => {
+                    match goth_mir::lower_module(&module) {
+                        Ok(mir_program) => {
+                            match goth_mlir::emit_program(&mir_program) {
+                                Ok(mlir) => println!("{}", mlir),
+                                Err(e) => eprintln!("{}: {:?}", "MLIR emission error".red().bold(), e),
+                            }
+                        }
+                        Err(e) => eprintln!("{}: {:?}", "MIR lowering error".red().bold(), e),
+                    }
+                    return;
+                }
+                EmitMode::Evaluate => {}
+            }
+
+            if no_main {
+                // Just load declarations like before (verbose mode)
+                run_module(&module, trace);
+            } else {
+                // Load declarations silently and execute main
+                run_module_with_main(&module, trace, program_args);
             }
         }
-        Err(e) => eprintln!("{}: {}", "File error".red().bold(), e),
+        Err(e) => eprintln!("{}: {}", "Load error".red().bold(), e),
     }
 }
 
