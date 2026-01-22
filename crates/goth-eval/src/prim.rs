@@ -676,6 +676,11 @@ fn take(n: Value, arr: Value) -> EvalResult<Value> {
             }
             let count = (*count).max(0) as usize;
             let count = count.min(t.len());
+            // Preserve string type when taking from strings
+            if let Some(s) = t.to_string_value() {
+                let taken: String = s.chars().take(count).collect();
+                return Ok(Value::string(&taken));
+            }
             let data: Vec<Value> = (0..count).map(|i| t.get_flat(i).unwrap()).collect();
             Ok(Value::Tensor(Tensor::from_values(vec![data.len()], data)))
         }
@@ -701,6 +706,11 @@ fn drop_fn(n: Value, arr: Value) -> EvalResult<Value> {
             }
             let count = (*count).max(0) as usize;
             let count = count.min(t.len());
+            // Preserve string type when dropping from strings
+            if let Some(s) = t.to_string_value() {
+                let dropped: String = s.chars().skip(count).collect();
+                return Ok(Value::string(&dropped));
+            }
             let data: Vec<Value> = (count..t.len()).map(|i| t.get_flat(i).unwrap()).collect();
             Ok(Value::Tensor(Tensor::from_values(vec![data.len()], data)))
         }
