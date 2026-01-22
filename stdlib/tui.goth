@@ -305,6 +305,7 @@ let blockRight = "▐"
 
 let keyEscape = 27
 let keyEnter = 13
+let keyNewline = 10       # Some terminals send LF instead of CR for Enter
 let keyBackspace = 127
 let keyTab = 9
 let keySpace = 32

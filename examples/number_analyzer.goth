@@ -283,8 +283,8 @@ use "../stdlib/canvas.goth"
      let _ = clearAnalysis ⟨⟩ in
      ""
 
-   # Enter = analyze (keep same input)
-   else if key = 13 then
+   # Enter = analyze (keep same input) - handle both CR (13) and LF (10)
+   else if key = 13 ∨ key = 10 then
      let n = parseDigits input in
      let _ = if n > 0 then analyzeNumber n else ⟨⟩ in
      input
