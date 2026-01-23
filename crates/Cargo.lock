@@ -742,6 +742,7 @@ dependencies = [
  "goth-mir",
  "melior",
  "pretty_assertions",
+ "regex",
  "thiserror",
 ]
 

@@ -18,6 +18,7 @@ text-emit = []
 goth-ast = { path = "../goth-ast" }
 goth-mir = { path = "../goth-mir" }
 thiserror = "1.0"
+regex = "1.10"
 # Rust bindings to MLIR (optional, requires LLVM 17+)
 melior = { version = "0.18", optional = true }
 
