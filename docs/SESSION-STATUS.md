@@ -96,11 +96,18 @@ _16: I64 = BinOp(Sub, _6, Const(1))   // len - 1 ✓
 - MLIR/LLVM backends updated to handle Bool result types
 - Test: `if 3 < 5 then 1 else 0` compiles and runs correctly
 
-### UndefinedLocal in tui_demo.goth
-- **Error:** `UndefinedLocal("LocalId(54)")`
-- **Location:** LLVM emit during tui_demo compilation
-- **Root Cause:** Complex control flow with many locals across blocks
-- **Investigation needed:** Track how locals are defined/used across basic blocks
+### ~~UndefinedLocal in tui_demo.goth~~ ✅ FIXED (commit 605ae19)
+- `find_multi_block_locals` now tracks both assignments AND uses
+- Locals used in different blocks from where defined get stack allocation
+- Fix: Added helper functions to collect local refs from Rhs/Terminators
+
+### Remaining LLVM Codegen Issues
+- **Error:** `clang failed with exit code: Some(1)` for tui_demo.goth
+- **Issues in generated LLVM IR:**
+  - `call void @cursorHide(void 0)` - void passed as argument
+  - `call void @goth_print_i64(i64 @.str.0)` - string global as i64
+  - Malformed function pointer types in curried calls
+- **Root cause:** LLVM emit doesn't handle unit type (`⟨⟩`) and higher-order functions properly
 
 ---
 
@@ -133,9 +140,10 @@ _16: I64 = BinOp(Sub, _6, Const(1))   // len - 1 ✓
 
 ## Next Steps
 
-1. **Fix UndefinedLocal in tui_demo** - Debug LLVM emit local tracking across blocks
-2. **Add more primitive support** - toString, write, and TUI primitives
-3. **MLIR Phase 5** - CLI integration, comprehensive testing, error handling
+1. **Fix unit type handling in LLVM** - Don't emit `void 0` as arguments
+2. **Fix function pointer types** - Curried function calls generate malformed types
+3. **Add more primitive support** - toString, write, and TUI primitives
+4. **MLIR Phase 5** - CLI integration, comprehensive testing, error handling
 
 ---
 
