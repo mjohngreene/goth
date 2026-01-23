@@ -83,21 +83,20 @@ goth_ast::op::UnaryOp::Sum | goth_ast::op::UnaryOp::Prod => {
 
 ## Current Issue
 
-### De Bruijn Index Resolution for tui_demo.goth
-- **Error:** `UnsupportedOp("String Sub")`
-- **Location:** vline function in tui.goth
-- **Root Cause:** After multiple nested let bindings with a `let _ = ...` inside, the de Bruijn indices are resolving to wrong locals
-
-**MIR Output shows:**
+### ~~De Bruijn Index Resolution~~ ✅ FIXED (commit ee8a0bb)
+The wildcard pattern issue is resolved. vline MIR now correctly shows:
 ```
-_14: I64 = BinOp(Add, _5, Const(1))   // Should be _4 + 1 (row + 1)
-_16: String = BinOp(Sub, _7, Const(1)) // Should be _6 - 1 (len - 1), not _7 - 1 (ch - 1)
+_14: I64 = BinOp(Add, _4, Const(1))   // row + 1 ✓
+_16: I64 = BinOp(Sub, _6, Const(1))   // len - 1 ✓
 ```
 
-**Investigation needed:**
-1. Check resolver's handling of nested let bindings with wildcard `_` patterns
-2. Verify MIR lowering isn't incorrectly pushing/popping locals during intermediate expression lowering
-3. Check if closure call results are being pushed to the stack when they shouldn't be
+### Boolean Op Type Inference in LLVM Backend
+- **Error:** `UnsupportedOp("And")`
+- **Location:** `goth-llvm/src/emit.rs` line 363
+- **Root Cause:** And/Or operations have integer type (I64) instead of Bool type
+- **Effect:** LLVM backend branches to integer codepath, which doesn't support And/Or
+
+**Fix needed:** MIR lowering should infer Bool type for And/Or binary operations, not the operand type.
 
 ---
 
@@ -107,10 +106,11 @@ _16: String = BinOp(Sub, _7, Const(1)) // Should be _6 - 1 (len - 1), not _7 - 1
 - Simple expressions: `let x = 5 in x + 1` → 6 ✓
 - Float operations: `0.7 × (toFloat 30)` → 21 ✓
 - Basic functions with I64 return types ✓
+- vline MIR generation ✓
+- Wildcard pattern handling ✓
 
 ### Failing
-- `tui_demo.goth` - de Bruijn index resolution issue
-- Functions with complex nested let bindings
+- `tui_demo.goth` - Bool type inference for And/Or ops
 
 ---
 
@@ -129,10 +129,10 @@ _16: String = BinOp(Sub, _7, Const(1)) // Should be _6 - 1 (len - 1), not _7 - 1
 
 ## Next Steps
 
-1. **Debug de Bruijn resolution** - Trace through vline function lowering step by step
-2. **Fix intermediate result handling** - Check if closure call results affect the local stack
+1. **Fix Bool type inference for And/Or** - In `goth-mir/src/lower.rs`, And/Or BinOp should return Bool type
+2. **Complete tui_demo compilation** - After type fix, test full compilation
 3. **Add more primitive support** - toString, write, and TUI primitives
-4. **Test simpler functions** - Create minimal test cases for nested let patterns
+4. **MLIR Phase 5** - CLI integration, comprehensive testing, error handling
 
 ---
 
