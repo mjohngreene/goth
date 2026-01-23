@@ -138,8 +138,11 @@ impl LoweringContext {
 /// Check if a name is a known primitive
 fn is_primitive(name: &str) -> bool {
     matches!(name,
+        // Sequence generation
         "iota" | "ι" | "⍳" |
         "range" | "…" |
+
+        // Array/tensor operations
         "len" | "length" |
         "sum" | "Σ" |
         "prod" | "Π" |
@@ -154,16 +157,52 @@ fn is_primitive(name: &str) -> bool {
         "drop" | "↓" |
         "concat" | "⧺" |
         "index" |
-        "print" |
-        "toString" | "str" |
-        "toInt" | "toFloat" |
+        "replicate" |
+        "zip" |
+        "norm" |
+
+        // Math operations
         "dot" | "·" |
         "matmul" |
         "sqrt" | "√" |
         "abs" |
         "floor" | "ceil" | "round" |
         "sin" | "cos" | "tan" |
-        "exp" | "ln" | "log"
+        "asin" | "acos" | "atan" |
+        "sinh" | "cosh" | "tanh" |
+        "exp" | "ln" | "log" | "log10" | "log2" |
+        "gamma" | "Γ" |
+        "sign" |
+
+        // Type conversions
+        "toString" | "str" |
+        "toInt" | "toFloat" | "toBool" | "toChar" |
+        "parseInt" | "parseFloat" |
+
+        // String operations
+        "chars" |
+        "strConcat" |
+        "strLen" |
+        "lines" |
+        "words" |
+        "bytes" |
+        "strEq" |
+        "startsWith" |
+        "endsWith" |
+        "contains" |
+        "joinStrings" |
+
+        // I/O operations
+        "print" |
+        "write" |
+        "flush" |
+        "readLine" |
+        "readKey" |
+        "rawModeEnter" |
+        "rawModeExit" |
+        "sleep" |
+        "readFile" |
+        "writeFile"
     )
 }
 
@@ -1133,6 +1172,326 @@ fn lower_primitive_app(ctx: &mut LoweringContext, prim_name: &str, arg: &Expr) -
             });
             Ok((Operand::Local(dest), result_ty))
         }
+        "toBool" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::Bool);
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "toBool".to_string(),
+                args: vec![arg_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "toChar" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::Char);
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "toChar".to_string(),
+                args: vec![arg_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "parseInt" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::I64);
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "parseInt".to_string(),
+                args: vec![arg_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "parseFloat" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::F64);
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "parseFloat".to_string(),
+                args: vec![arg_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+
+        // String operations
+        "chars" => {
+            // String → [n]Char (returns the string as char tensor)
+            let result_ty = Type::vector(
+                goth_ast::shape::Dim::Var("n".into()),
+                Type::Prim(goth_ast::types::PrimType::Char)
+            );
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "chars".to_string(),
+                args: vec![arg_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "strLen" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::I64);
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "strLen".to_string(),
+                args: vec![arg_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "lines" => {
+            // String → [m]String (split by newlines)
+            let string_ty = Type::vector(
+                goth_ast::shape::Dim::Var("k".into()),
+                Type::Prim(goth_ast::types::PrimType::Char)
+            );
+            let result_ty = Type::vector(
+                goth_ast::shape::Dim::Var("m".into()),
+                string_ty
+            );
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "lines".to_string(),
+                args: vec![arg_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "words" => {
+            // String → [m]String (split by whitespace)
+            let string_ty = Type::vector(
+                goth_ast::shape::Dim::Var("k".into()),
+                Type::Prim(goth_ast::types::PrimType::Char)
+            );
+            let result_ty = Type::vector(
+                goth_ast::shape::Dim::Var("m".into()),
+                string_ty
+            );
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "words".to_string(),
+                args: vec![arg_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "bytes" => {
+            // String → [m]I64 (UTF-8 byte values)
+            let result_ty = Type::vector(
+                goth_ast::shape::Dim::Var("m".into()),
+                Type::Prim(goth_ast::types::PrimType::I64)
+            );
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "bytes".to_string(),
+                args: vec![arg_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "joinStrings" => {
+            // [n]String → String (join array of strings)
+            let result_ty = Type::vector(
+                goth_ast::shape::Dim::Var("m".into()),
+                Type::Prim(goth_ast::types::PrimType::Char)
+            );
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "joinStrings".to_string(),
+                args: vec![arg_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+
+        // Additional math functions
+        "sin" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::F64);
+            ctx.emit(dest, result_ty.clone(), Rhs::UnaryOp(
+                goth_ast::op::UnaryOp::Sin,
+                arg_op
+            ));
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "cos" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::F64);
+            ctx.emit(dest, result_ty.clone(), Rhs::UnaryOp(
+                goth_ast::op::UnaryOp::Cos,
+                arg_op
+            ));
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "tan" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::F64);
+            ctx.emit(dest, result_ty.clone(), Rhs::UnaryOp(
+                goth_ast::op::UnaryOp::Tan,
+                arg_op
+            ));
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "asin" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::F64);
+            ctx.emit(dest, result_ty.clone(), Rhs::UnaryOp(
+                goth_ast::op::UnaryOp::Asin,
+                arg_op
+            ));
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "acos" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::F64);
+            ctx.emit(dest, result_ty.clone(), Rhs::UnaryOp(
+                goth_ast::op::UnaryOp::Acos,
+                arg_op
+            ));
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "atan" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::F64);
+            ctx.emit(dest, result_ty.clone(), Rhs::UnaryOp(
+                goth_ast::op::UnaryOp::Atan,
+                arg_op
+            ));
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "sinh" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::F64);
+            ctx.emit(dest, result_ty.clone(), Rhs::UnaryOp(
+                goth_ast::op::UnaryOp::Sinh,
+                arg_op
+            ));
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "cosh" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::F64);
+            ctx.emit(dest, result_ty.clone(), Rhs::UnaryOp(
+                goth_ast::op::UnaryOp::Cosh,
+                arg_op
+            ));
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "tanh" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::F64);
+            ctx.emit(dest, result_ty.clone(), Rhs::UnaryOp(
+                goth_ast::op::UnaryOp::Tanh,
+                arg_op
+            ));
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "exp" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::F64);
+            ctx.emit(dest, result_ty.clone(), Rhs::UnaryOp(
+                goth_ast::op::UnaryOp::Exp,
+                arg_op
+            ));
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "ln" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::F64);
+            ctx.emit(dest, result_ty.clone(), Rhs::UnaryOp(
+                goth_ast::op::UnaryOp::Ln,
+                arg_op
+            ));
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "log" | "log10" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::F64);
+            ctx.emit(dest, result_ty.clone(), Rhs::UnaryOp(
+                goth_ast::op::UnaryOp::Log10,
+                arg_op
+            ));
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "log2" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::F64);
+            ctx.emit(dest, result_ty.clone(), Rhs::UnaryOp(
+                goth_ast::op::UnaryOp::Log2,
+                arg_op
+            ));
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "gamma" | "Γ" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::F64);
+            ctx.emit(dest, result_ty.clone(), Rhs::UnaryOp(
+                goth_ast::op::UnaryOp::Gamma,
+                arg_op
+            ));
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "sign" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::F64);
+            ctx.emit(dest, result_ty.clone(), Rhs::UnaryOp(
+                goth_ast::op::UnaryOp::Sign,
+                arg_op
+            ));
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "round" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::I64);
+            ctx.emit(dest, result_ty.clone(), Rhs::UnaryOp(
+                goth_ast::op::UnaryOp::Round,
+                arg_op
+            ));
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "norm" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::F64);
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "norm".to_string(),
+                args: vec![arg_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+
+        // I/O operations
+        "write" => {
+            let result_ty = Type::Tuple(vec![]);
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "write".to_string(),
+                args: vec![arg_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "flush" => {
+            let result_ty = Type::Tuple(vec![]);
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "flush".to_string(),
+                args: vec![arg_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "readLine" => {
+            let result_ty = Type::vector(
+                goth_ast::shape::Dim::Var("n".into()),
+                Type::Prim(goth_ast::types::PrimType::Char)
+            );
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "readLine".to_string(),
+                args: vec![arg_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "readKey" => {
+            let result_ty = Type::Prim(goth_ast::types::PrimType::I64);
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "readKey".to_string(),
+                args: vec![arg_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "rawModeEnter" => {
+            let result_ty = Type::Tuple(vec![]);
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "rawModeEnter".to_string(),
+                args: vec![arg_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "rawModeExit" => {
+            let result_ty = Type::Tuple(vec![]);
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "rawModeExit".to_string(),
+                args: vec![arg_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "sleep" => {
+            let result_ty = Type::Tuple(vec![]);
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "sleep".to_string(),
+                args: vec![arg_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "readFile" => {
+            let result_ty = Type::vector(
+                goth_ast::shape::Dim::Var("n".into()),
+                Type::Prim(goth_ast::types::PrimType::Char)
+            );
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "readFile".to_string(),
+                args: vec![arg_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
 
         // Default: generic primitive call
         _ => {
@@ -1239,6 +1598,101 @@ fn lower_primitive_app2(ctx: &mut LoweringContext, prim_name: &str, arg1: &Expr,
             let result_ty = arg2_ty.clone();
             ctx.emit(dest, result_ty.clone(), Rhs::Prim {
                 name: "reshape".to_string(),
+                args: vec![arg1_op, arg2_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+
+        // String operations (two-argument)
+        "strConcat" => {
+            // String → String → String
+            let result_ty = Type::vector(
+                goth_ast::shape::Dim::Var("p".into()),
+                Type::Prim(goth_ast::types::PrimType::Char)
+            );
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "strConcat".to_string(),
+                args: vec![arg1_op, arg2_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "strEq" => {
+            // String → String → Bool
+            let result_ty = Type::Prim(goth_ast::types::PrimType::Bool);
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "strEq".to_string(),
+                args: vec![arg1_op, arg2_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "startsWith" => {
+            // String → String → Bool
+            let result_ty = Type::Prim(goth_ast::types::PrimType::Bool);
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "startsWith".to_string(),
+                args: vec![arg1_op, arg2_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "endsWith" => {
+            // String → String → Bool
+            let result_ty = Type::Prim(goth_ast::types::PrimType::Bool);
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "endsWith".to_string(),
+                args: vec![arg1_op, arg2_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "contains" => {
+            // String → String → Bool
+            let result_ty = Type::Prim(goth_ast::types::PrimType::Bool);
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "contains".to_string(),
+                args: vec![arg1_op, arg2_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+
+        // Array operations (two-argument)
+        "replicate" => {
+            // I64 → α → [n]α
+            let result_ty = Type::vector(
+                goth_ast::shape::Dim::Var("n".into()),
+                arg2_ty.clone()
+            );
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "replicate".to_string(),
+                args: vec![arg1_op, arg2_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+        "zip" => {
+            // [n]α → [n]β → [n]⟨α, β⟩
+            let elem1 = match &arg1_ty {
+                Type::Tensor(_, elem) => (**elem).clone(),
+                _ => arg1_ty.clone(),
+            };
+            let elem2 = match &arg2_ty {
+                Type::Tensor(_, elem) => (**elem).clone(),
+                _ => arg2_ty.clone(),
+            };
+            let result_ty = Type::vector(
+                goth_ast::shape::Dim::Var("n".into()),
+                Type::tuple(vec![elem1, elem2])
+            );
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "zip".to_string(),
+                args: vec![arg1_op, arg2_op],
+            });
+            Ok((Operand::Local(dest), result_ty))
+        }
+
+        // File I/O (two-argument)
+        "writeFile" => {
+            // String → String → Unit
+            let result_ty = Type::Tuple(vec![]);
+            ctx.emit(dest, result_ty.clone(), Rhs::Prim {
+                name: "writeFile".to_string(),
                 args: vec![arg1_op, arg2_op],
             });
             Ok((Operand::Local(dest), result_ty))

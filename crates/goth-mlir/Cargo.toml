@@ -24,4 +24,5 @@ melior = { version = "0.18", optional = true }
 
 [dev-dependencies]
 pretty_assertions = "1.4"
+goth-parse = { path = "../goth-parse" }
 
