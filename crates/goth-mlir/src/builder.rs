@@ -256,6 +256,17 @@ impl<'a> MlirBuilder<'a> {
                 format!("%{}", self.ctx.fresh_ssa().strip_prefix('%').unwrap_or("0").parse::<usize>().unwrap_or(0) - 1)
             }
 
+            Rhs::ArrayFill { size, value } => {
+                let _size_ssa = self.emit_operand(size)?;
+                let value_ssa = self.emit_operand(value)?;
+                // Use tensor.splat or similar for filled arrays
+                let ty_str = crate::types::type_to_mlir_string(&stmt.ty)?;
+                let code = format!("{}%arr = tensor.splat {} : {}\n",
+                    self.ctx.indent_str(), value_ssa, ty_str);
+                self.ctx.emit(&code);
+                "%arr".to_string()
+            }
+
             Rhs::Index(arr, idx) => {
                 let arr_ssa = self.emit_operand(arr)?;
                 let idx_ssa = self.emit_operand(idx)?;

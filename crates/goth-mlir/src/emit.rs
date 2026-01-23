@@ -381,7 +381,7 @@ fn emit_stmt(ctx: &mut MlirContext, stmt: &Stmt, output: &mut String) -> Result<
             for elem in elems {
                 elem_ssas.push(emit_operand(ctx, elem, output)?);
             }
-            
+
             // Create tensor
             let code = format!("{}{} = tensor.from_elements {} : {}\n",
                 ctx.indent_str(), ssa,
@@ -389,7 +389,21 @@ fn emit_stmt(ctx: &mut MlirContext, stmt: &Stmt, output: &mut String) -> Result<
                 emit_type(&stmt.ty)?);
             (ssa, code)
         }
-        
+
+        Rhs::ArrayFill { size, value } => {
+            let ssa = ctx.fresh_ssa();
+            let size_ssa = emit_operand(ctx, size, output)?;
+            let value_ssa = emit_operand(ctx, value, output)?;
+
+            // Use linalg.fill or tensor.generate for filled arrays
+            // For now, use a comment placeholder
+            let code = format!("{}// {}: ArrayFill(size={}, value={})\n{}{} = tensor.splat {} : {}\n",
+                ctx.indent_str(), ssa, size_ssa, value_ssa,
+                ctx.indent_str(), ssa, value_ssa,
+                emit_type(&stmt.ty)?);
+            (ssa, code)
+        }
+
         Rhs::MakeClosure { func, captures } => {
             let ssa = ctx.fresh_ssa();
             // Closure creation - pack function pointer + environment

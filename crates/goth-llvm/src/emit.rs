@@ -87,7 +87,9 @@ impl LlvmContext {
 /// Check if a type is integer-like
 fn is_int_type(ty: &Type) -> bool {
     match ty {
-        Type::Prim(PrimType::I64) => true,
+        Type::Prim(PrimType::I64 | PrimType::I32 | PrimType::I16 | PrimType::I8) => true,
+        Type::Prim(PrimType::U64 | PrimType::U32 | PrimType::U16 | PrimType::U8) => true,
+        Type::Prim(PrimType::Int | PrimType::Nat) => true,
         Type::Var(name) => matches!(name.as_ref(), "I" | "Int" | "ℤ" | "N" | "Nat" | "ℕ"),
         _ => false,
     }
@@ -96,7 +98,7 @@ fn is_int_type(ty: &Type) -> bool {
 /// Check if a type is float-like
 fn is_float_type(ty: &Type) -> bool {
     match ty {
-        Type::Prim(PrimType::F64) => true,
+        Type::Prim(PrimType::F64 | PrimType::F32) => true,
         Type::Var(name) => matches!(name.as_ref(), "F" | "Float"),
         _ => false,
     }
@@ -107,6 +109,15 @@ fn is_bool_type(ty: &Type) -> bool {
     match ty {
         Type::Prim(PrimType::Bool) => true,
         Type::Var(name) => matches!(name.as_ref(), "B" | "Bool"),
+        _ => false,
+    }
+}
+
+/// Check if a type is string
+fn is_string_type(ty: &Type) -> bool {
+    match ty {
+        Type::Prim(PrimType::String) => true,
+        Type::Var(name) => matches!(name.as_ref(), "String" | "Str"),
         _ => false,
     }
 }
@@ -161,10 +172,28 @@ fn find_multi_block_locals(func: &Function) -> HashMap<LocalId, Type> {
 /// Emit LLVM type
 pub fn emit_type(ty: &Type) -> Result<String> {
     match ty {
+        // Fixed-width integers
         Type::Prim(PrimType::I64) => Ok("i64".to_string()),
+        Type::Prim(PrimType::I32) => Ok("i32".to_string()),
+        Type::Prim(PrimType::I16) => Ok("i16".to_string()),
+        Type::Prim(PrimType::I8) => Ok("i8".to_string()),
+        Type::Prim(PrimType::U64) => Ok("i64".to_string()),
+        Type::Prim(PrimType::U32) => Ok("i32".to_string()),
+        Type::Prim(PrimType::U16) => Ok("i16".to_string()),
+        Type::Prim(PrimType::U8) => Ok("i8".to_string()),
+
+        // Floating point
         Type::Prim(PrimType::F64) => Ok("double".to_string()),
+        Type::Prim(PrimType::F32) => Ok("float".to_string()),
+
+        // Arbitrary precision (map to i64 for now)
+        Type::Prim(PrimType::Int) => Ok("i64".to_string()),
+        Type::Prim(PrimType::Nat) => Ok("i64".to_string()),
+
+        // Other primitives
         Type::Prim(PrimType::Bool) => Ok("i1".to_string()),
-        Type::Prim(PrimType::Char) => Ok("i8".to_string()),
+        Type::Prim(PrimType::Char) => Ok("i32".to_string()), // Unicode scalar is 32-bit
+        Type::Prim(PrimType::Byte) => Ok("i8".to_string()),
         Type::Prim(PrimType::String) => Ok("i8*".to_string()), // Pointer to null-terminated UTF-8
 
         Type::Tuple(fields) if fields.is_empty() => Ok("void".to_string()),
@@ -195,6 +224,39 @@ pub fn emit_type(ty: &Type) -> Result<String> {
             "N" | "Nat" | "ℕ" => Ok("i64".to_string()),
             _ => Ok("i64".to_string()),
         },
+
+        // Optional type (nullable pointer)
+        Type::Option(inner) => {
+            let _inner_ty = emit_type(inner)?;
+            Ok("i8*".to_string()) // Opaque pointer for nullable
+        }
+
+        // Effectful type (strip effects for codegen)
+        Type::Effectful(inner, _) => emit_type(inner),
+
+        // Interval type (strip constraints for codegen)
+        Type::Interval(inner, _) => emit_type(inner),
+
+        // Forall (use inner type)
+        Type::Forall(_, inner) => emit_type(inner),
+
+        // Exists (use inner type)
+        Type::Exists(_, inner) => emit_type(inner),
+
+        // Type application (use the base type)
+        Type::App(base, _) => emit_type(base),
+
+        // Variant (sum type) - represented as tagged union
+        Type::Variant(_) => Ok("i8*".to_string()), // Pointer to tag + payload
+
+        // Refinement type (strip predicate)
+        Type::Refinement { base, .. } => emit_type(base),
+
+        // Uncertain type
+        Type::Uncertain(val_ty, _) => emit_type(val_ty),
+
+        // Hole (should be resolved by type inference)
+        Type::Hole => Ok("i64".to_string()),
 
         _ => Err(LlvmError::UnsupportedType(format!("{:?}", ty))),
     }
@@ -343,6 +405,21 @@ fn emit_binop(
             _ => return Err(LlvmError::UnsupportedOp(format!("{:?}", op))),
         };
         (op_name, "i1".to_string())
+    } else if is_string_type(ty) {
+        // String comparison - call strcmp and compare result
+        match op {
+            goth_ast::op::BinOp::Eq | goth_ast::op::BinOp::Neq => {
+                // Call strcmp and compare with 0
+                let cmp_ssa = ctx.fresh_ssa();
+                let op_name = if *op == goth_ast::op::BinOp::Eq { "icmp eq" } else { "icmp ne" };
+                let code = format!(
+                    "  {} = call i32 @strcmp(i8* {}, i8* {})\n  {} = {} i32 {}, 0\n",
+                    cmp_ssa, left, right, ssa, op_name, cmp_ssa
+                );
+                return Ok((ssa, code));
+            }
+            _ => return Err(LlvmError::UnsupportedOp(format!("String {:?}", op))),
+        }
     } else {
         return Err(LlvmError::UnsupportedType(format!("{:?}", ty)));
     };
@@ -660,10 +737,10 @@ fn emit_stmt(ctx: &mut LlvmContext, stmt: &Stmt, output: &mut String) -> Result<
                         // For now, assume i64
                         let code = format!("  call void @goth_print_i64(i64 {})\n", arg_val);
                         output.push_str(&code);
-                        let code = "  call void @goth_print_newline()\n".to_string();
-                        return Ok(());
+                        output.push_str("  call void @goth_print_newline()\n");
                     }
-                    (ssa, String::new())
+                    // Return unit value (0 for LLVM purposes) - fall through to register local
+                    ("0".to_string(), String::new())
                 }
                 "len" => {
                     if let Some(arg) = args.first() {
@@ -691,6 +768,58 @@ fn emit_stmt(ctx: &mut LlvmContext, stmt: &Stmt, output: &mut String) -> Result<
                         (ssa, code)
                     } else {
                         (ssa, String::new())
+                    }
+                }
+                "toFloat" => {
+                    // Convert integer to float
+                    if let Some(arg) = args.first() {
+                        let arg_ty = Type::Prim(PrimType::I64);
+                        let arg_val = emit_operand(ctx, arg, &arg_ty, output)?;
+                        let code = format!("  {} = sitofp i64 {} to double\n", ssa, arg_val);
+                        (ssa, code)
+                    } else {
+                        ("0.0".to_string(), String::new())
+                    }
+                }
+                "toInt" => {
+                    // Convert float to integer
+                    if let Some(arg) = args.first() {
+                        let arg_ty = Type::Prim(PrimType::F64);
+                        let arg_val = emit_operand(ctx, arg, &arg_ty, output)?;
+                        let code = format!("  {} = fptosi double {} to i64\n", ssa, arg_val);
+                        (ssa, code)
+                    } else {
+                        ("0".to_string(), String::new())
+                    }
+                }
+                "floor" => {
+                    if let Some(arg) = args.first() {
+                        let arg_ty = Type::Prim(PrimType::F64);
+                        let arg_val = emit_operand(ctx, arg, &arg_ty, output)?;
+                        let code = format!("  {} = call double @floor(double {})\n", ssa, arg_val);
+                        (ssa, code)
+                    } else {
+                        ("0.0".to_string(), String::new())
+                    }
+                }
+                "ceil" => {
+                    if let Some(arg) = args.first() {
+                        let arg_ty = Type::Prim(PrimType::F64);
+                        let arg_val = emit_operand(ctx, arg, &arg_ty, output)?;
+                        let code = format!("  {} = call double @ceil(double {})\n", ssa, arg_val);
+                        (ssa, code)
+                    } else {
+                        ("0.0".to_string(), String::new())
+                    }
+                }
+                "sqrt" => {
+                    if let Some(arg) = args.first() {
+                        let arg_ty = Type::Prim(PrimType::F64);
+                        let arg_val = emit_operand(ctx, arg, &arg_ty, output)?;
+                        let code = format!("  {} = call double @sqrt(double {})\n", ssa, arg_val);
+                        (ssa, code)
+                    } else {
+                        ("0.0".to_string(), String::new())
                     }
                 }
                 _ => {
@@ -891,6 +1020,119 @@ fn emit_stmt(ctx: &mut LlvmContext, stmt: &Stmt, output: &mut String) -> Result<
             (ssa, code)
         }
 
+        Rhs::ArrayFill { size, value } => {
+            // Create array filled with n copies of a value: [n]⊢v
+            let size_ty = Type::Prim(PrimType::I64);
+            let size_val = emit_operand(ctx, size, &size_ty, output)?;
+            let value_ty = Type::Prim(PrimType::I64);
+            let value_val = emit_operand(ctx, value, &value_ty, output)?;
+
+            // Calculate allocation size: (size + 1) * 8 bytes
+            let size_plus_one = ctx.fresh_ssa();
+            output.push_str(&format!(
+                "  {} = add i64 {}, 1\n",
+                size_plus_one, size_val
+            ));
+            let alloc_size = ctx.fresh_ssa();
+            output.push_str(&format!(
+                "  {} = mul i64 {}, 8\n",
+                alloc_size, size_plus_one
+            ));
+
+            // Allocate memory
+            let alloc_ssa = ctx.fresh_ssa();
+            output.push_str(&format!(
+                "  {} = call i8* @malloc(i64 {})\n",
+                alloc_ssa, alloc_size
+            ));
+
+            // Store length at position 0
+            let len_ptr = ctx.fresh_ssa();
+            output.push_str(&format!(
+                "  {} = bitcast i8* {} to i64*\n",
+                len_ptr, alloc_ssa
+            ));
+            output.push_str(&format!(
+                "  store i64 {}, i64* {}\n",
+                size_val, len_ptr
+            ));
+
+            // Fill loop: for i = 0 to size-1, store value at position i+1
+            // We'll unroll for small constant sizes or use a simple loop
+            // For now, emit a loop
+            let loop_header = format!("arrayfill.header.{}", ctx.next_ssa);
+            let loop_body = format!("arrayfill.body.{}", ctx.next_ssa);
+            let loop_exit = format!("arrayfill.exit.{}", ctx.next_ssa);
+            ctx.next_ssa += 1;
+
+            // Initialize loop counter
+            let counter_ptr = ctx.fresh_ssa();
+            output.push_str(&format!(
+                "  {} = alloca i64\n",
+                counter_ptr
+            ));
+            output.push_str(&format!(
+                "  store i64 0, i64* {}\n",
+                counter_ptr
+            ));
+            output.push_str(&format!(
+                "  br label %{}\n",
+                loop_header
+            ));
+
+            // Loop header: check if counter < size
+            output.push_str(&format!("{}:\n", loop_header));
+            let counter_val = ctx.fresh_ssa();
+            output.push_str(&format!(
+                "  {} = load i64, i64* {}\n",
+                counter_val, counter_ptr
+            ));
+            let cmp = ctx.fresh_ssa();
+            output.push_str(&format!(
+                "  {} = icmp slt i64 {}, {}\n",
+                cmp, counter_val, size_val
+            ));
+            output.push_str(&format!(
+                "  br i1 {}, label %{}, label %{}\n",
+                cmp, loop_body, loop_exit
+            ));
+
+            // Loop body: store value, increment counter
+            output.push_str(&format!("{}:\n", loop_body));
+            let offset = ctx.fresh_ssa();
+            output.push_str(&format!(
+                "  {} = add i64 {}, 1\n",
+                offset, counter_val
+            ));
+            let elem_ptr = ctx.fresh_ssa();
+            output.push_str(&format!(
+                "  {} = getelementptr i64, i64* {}, i64 {}\n",
+                elem_ptr, len_ptr, offset
+            ));
+            output.push_str(&format!(
+                "  store i64 {}, i64* {}\n",
+                value_val, elem_ptr
+            ));
+            let next_counter = ctx.fresh_ssa();
+            output.push_str(&format!(
+                "  {} = add i64 {}, 1\n",
+                next_counter, counter_val
+            ));
+            output.push_str(&format!(
+                "  store i64 {}, i64* {}\n",
+                next_counter, counter_ptr
+            ));
+            output.push_str(&format!(
+                "  br label %{}\n",
+                loop_header
+            ));
+
+            // Loop exit
+            output.push_str(&format!("{}:\n", loop_exit));
+
+            (alloc_ssa, String::new())
+        }
+
         _ => {
             return Err(LlvmError::UnsupportedOp(format!(
                 "Statement: {:?}",
@@ -933,9 +1175,14 @@ fn emit_block(
         Terminator::Return(op) => {
             // Use the function's return type from context
             let ret_ty = ctx.ret_ty.clone();
-            let ret_val = emit_operand(ctx, op, &ret_ty, output)?;
             let llvm_ty = emit_type(&ret_ty)?;
-            output.push_str(&format!("  ret {} {}\n", llvm_ty, ret_val));
+            if llvm_ty == "void" {
+                // Void functions don't return a value
+                output.push_str("  ret void\n");
+            } else {
+                let ret_val = emit_operand(ctx, op, &ret_ty, output)?;
+                output.push_str(&format!("  ret {} {}\n", llvm_ty, ret_val));
+            }
         }
 
         Terminator::Goto(block_id) => {
@@ -1064,6 +1311,7 @@ fn emit_c_main(main_func: &Function) -> Result<String> {
     let mut output = String::new();
 
     let ret_ty = emit_type(&main_func.ret_ty)?;
+    let is_void_ret = ret_ty == "void";
     let is_float_ret = matches!(&main_func.ret_ty, Type::Prim(PrimType::F64))
         || matches!(&main_func.ret_ty, Type::Var(n) if n.as_ref() == "F" || n.as_ref() == "Float");
 
@@ -1076,10 +1324,19 @@ fn emit_c_main(main_func: &Function) -> Result<String> {
         .filter(|ty| emit_type(ty).map(|t| t != "void").unwrap_or(true))
         .collect();
 
+    // Helper to emit the call, handling void return type
+    let emit_call = |output: &mut String, args: &str| {
+        if is_void_ret {
+            output.push_str(&format!("  call void @goth_main({})\n", args));
+        } else {
+            output.push_str(&format!("  %result = call {} @goth_main({})\n", ret_ty, args));
+        }
+    };
+
     // If goth main takes arguments, we need to parse them from argv
     if real_params.is_empty() {
         // No arguments - just call
-        output.push_str(&format!("  %result = call {} @goth_main()\n", ret_ty));
+        emit_call(&mut output, "");
     } else if real_params.len() == 1 {
         let param_ty = real_params[0];
         let llvm_ty = emit_type(param_ty)?;
@@ -1114,10 +1371,7 @@ fn emit_c_main(main_func: &Function) -> Result<String> {
             output.push_str(&format!("  %arg0 = phi {} [ %parsed, %parse_arg ], [ 0, %use_default ]\n", llvm_ty));
         }
 
-        output.push_str(&format!(
-            "  %result = call {} @goth_main({} %arg0)\n",
-            ret_ty, llvm_ty
-        ));
+        emit_call(&mut output, &format!("{} %arg0", llvm_ty));
     } else {
         // Multiple arguments - parse each from argv
         let mut arg_calls = Vec::new();
@@ -1152,23 +1406,24 @@ fn emit_c_main(main_func: &Function) -> Result<String> {
             arg_calls.push(format!("{} %arg{}", llvm_ty, i));
         }
 
-        output.push_str(&format!(
-            "  %result = call {} @goth_main({})\n",
-            ret_ty,
-            arg_calls.join(", ")
-        ));
+        emit_call(&mut output, &arg_calls.join(", "));
     }
 
     output.push_str("\n");
-    output.push_str("  ; Print result\n");
 
-    if is_float_ret {
-        output.push_str("  call void @goth_print_f64(double %result)\n");
-    } else {
-        output.push_str(&format!("  call void @goth_print_i64({} %result)\n", ret_ty));
+    // Only print result if not void
+    if !is_void_ret {
+        output.push_str("  ; Print result\n");
+
+        if is_float_ret {
+            output.push_str("  call void @goth_print_f64(double %result)\n");
+        } else {
+            output.push_str(&format!("  call void @goth_print_i64({} %result)\n", ret_ty));
+        }
+
+        output.push_str("  call void @goth_print_newline()\n");
     }
 
-    output.push_str("  call void @goth_print_newline()\n");
     output.push_str("\n");
     output.push_str("  ; Return 0\n");
     output.push_str("  ret i32 0\n");

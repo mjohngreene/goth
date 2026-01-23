@@ -1,0 +1,166 @@
+# Goth Compiler - Session Status
+
+**Last Updated:** 2026-01-23
+**Current Branch:** `claude/goth-language-overview-fOWhO`
+
+## Summary
+
+Working on MIR/LLVM lowering to get `tui_demo.goth` compiling. Made significant progress on multiple issues.
+
+---
+
+## Completed Work
+
+### 1. Non-variant Match Lowering in MIR
+- **File:** `goth-mir/src/lower.rs`
+- **Issue:** Match expressions on literals/wildcards weren't supported
+- **Fix:** Implemented if-else chain approach for literal patterns, variable patterns, and wildcard patterns
+
+### 2. De Bruijn Index Convention Fix
+- **File:** `goth-mir/src/lower.rs` (line ~2460)
+- **Issue:** MIR was using reverse push order for params, but evaluator uses standard de Bruijn (most recent = 0)
+- **Fix:** Changed from reverse to forward push order:
+```rust
+// Push in FORWARD order so that:
+// ₀ = last param (standard de Bruijn, matching evaluator)
+for i in 0..param_types.len() {
+    fn_ctx.push_local(LocalId::new(i as u32), param_types[i].clone());
+}
+```
+
+### 3. Named Local Variables (Let Bindings)
+- **File:** `goth-mir/src/lower.rs`
+- **Issue:** Let bindings with named patterns (`let row = ...`) weren't resolving correctly
+- **Fix:** Added `named_locals: HashMap<String, (LocalId, Type)>` to LoweringContext to track name→local mappings
+
+### 4. ArrayFill Support in LLVM Backend
+- **Files:** `goth-mir/src/mir.rs`, `goth-mir/src/print.rs`, `goth-llvm/src/emit.rs`
+- **Issue:** ArrayFill (`[n]⊢v`) wasn't implemented in LLVM emission
+- **Fix:** Added Rhs::ArrayFill to MIR, implemented LLVM emission with loop for filling
+
+### 5. Void Return Type Handling
+- **File:** `goth-llvm/src/emit.rs`
+- **Issue:** `ret void 0` was generated for void functions, `%result = call void ...` for void calls
+- **Fix:**
+  - Terminator::Return now checks for void and emits `ret void` without value
+  - emit_c_main skips capturing/printing result for void functions
+
+### 6. Sum/Prod Reduce Type Inference
+- **File:** `goth-mir/src/lower.rs`
+- **Issue:** `UnaryOp(Sum, tensor)` returned tensor type instead of element type
+- **Fix:** Added special case for Sum/Prod to extract element type from tensor:
+```rust
+goth_ast::op::UnaryOp::Sum | goth_ast::op::UnaryOp::Prod => {
+    match &op_ty {
+        Type::Tensor(_, elem_ty) => (**elem_ty).clone(),
+        _ => op_ty.clone(),
+    }
+}
+```
+
+### 7. Type Conversion Primitives
+- **File:** `goth-llvm/src/emit.rs`
+- **Issue:** `toFloat`, `toInt`, `floor`, `ceil`, `sqrt` called nonexistent runtime functions
+- **Fix:** Added inline LLVM emission for these primitives:
+  - `toFloat` → `sitofp i64 to double`
+  - `toInt` → `fptosi double to i64`
+  - Math functions use LLVM intrinsics
+
+### 8. Print Primitive Registration
+- **File:** `goth-llvm/src/emit.rs`
+- **Issue:** `print` primitive returned early without registering the local, causing UndefinedLocal errors
+- **Fix:** Removed early return, falls through to register the local
+
+### 9. Extended Type Support in LLVM
+- **File:** `goth-llvm/src/emit.rs`
+- Added support for all Type variants in `emit_type`:
+  - All PrimType variants (I64, I32, Int, Nat, F64, F32, etc.)
+  - Type::Option, Type::Effectful, Type::Interval
+  - Type::Forall, Type::Exists, Type::App
+  - Type::Variant, Type::Refinement, Type::Uncertain, Type::Hole
+
+---
+
+## Current Issue
+
+### De Bruijn Index Resolution for tui_demo.goth
+- **Error:** `UnsupportedOp("String Sub")`
+- **Location:** vline function in tui.goth
+- **Root Cause:** After multiple nested let bindings with a `let _ = ...` inside, the de Bruijn indices are resolving to wrong locals
+
+**MIR Output shows:**
+```
+_14: I64 = BinOp(Add, _5, Const(1))   // Should be _4 + 1 (row + 1)
+_16: String = BinOp(Sub, _7, Const(1)) // Should be _6 - 1 (len - 1), not _7 - 1 (ch - 1)
+```
+
+**Investigation needed:**
+1. Check resolver's handling of nested let bindings with wildcard `_` patterns
+2. Verify MIR lowering isn't incorrectly pushing/popping locals during intermediate expression lowering
+3. Check if closure call results are being pushed to the stack when they shouldn't be
+
+---
+
+## Test Results
+
+### Passing
+- Simple expressions: `let x = 5 in x + 1` → 6 ✓
+- Float operations: `0.7 × (toFloat 30)` → 21 ✓
+- Basic functions with I64 return types ✓
+
+### Failing
+- `tui_demo.goth` - de Bruijn index resolution issue
+- Functions with complex nested let bindings
+
+---
+
+## Key Files Modified
+
+| File | Changes |
+|------|---------|
+| `goth-mir/src/lower.rs` | Match lowering, de Bruijn fix, named_locals, Sum/Prod types |
+| `goth-mir/src/mir.rs` | Added ArrayFill variant |
+| `goth-mir/src/print.rs` | ArrayFill display |
+| `goth-llvm/src/emit.rs` | ArrayFill, void handling, type conversions, all type variants |
+| `goth-mlir/src/emit.rs` | ArrayFill emission |
+| `goth-mlir/src/builder.rs` | ArrayFill handling |
+
+---
+
+## Next Steps
+
+1. **Debug de Bruijn resolution** - Trace through vline function lowering step by step
+2. **Fix intermediate result handling** - Check if closure call results affect the local stack
+3. **Add more primitive support** - toString, write, and TUI primitives
+4. **Test simpler functions** - Create minimal test cases for nested let patterns
+
+---
+
+## Useful Commands
+
+```bash
+# Emit MIR to debug lowering
+cargo run -q --bin gothic -- --emit-mir examples/tui_demo.goth
+
+# Emit LLVM IR to check codegen
+cargo run -q --bin gothic -- --emit-llvm /tmp/test.goth
+
+# Compile and run
+cargo run -q --bin gothic -- /tmp/test.goth -o /tmp/out && /tmp/out
+```
+
+---
+
+## Architecture Notes
+
+### De Bruijn Index Convention
+- Standard de Bruijn: ₀ = most recently bound
+- Function params pushed in order: param0, param1, ..., paramN
+- After push, ₀ = last param, ₁ = second-to-last, etc.
+- Each let binding shifts all indices by 1
+
+### Named Locals Tracking
+- `named_locals` HashMap tracks name→(LocalId, Type)
+- Inserted when entering let scope with named pattern
+- Removed when exiting scope
+- Checked first in Expr::Name lowering before falling back to de Bruijn lookup
