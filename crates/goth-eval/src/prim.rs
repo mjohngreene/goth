@@ -633,7 +633,7 @@ fn to_string(value: Value) -> EvalResult<Value> {
 fn chars(value: Value) -> EvalResult<Value> {
     match value {
         Value::Tensor(t) => {
-            if let Some(s) = t.to_string_value() {
+            if let Some(_s) = t.to_string_value() {
                 // Already a string, return as-is (it's already a char tensor)
                 Ok(Value::Tensor(t))
             } else {

@@ -107,7 +107,7 @@ fn main() {
         return;
     } else if let Some(file) = args.file {
         // Run file
-        run_file(&file, args.trace, args.parse_only, args.ast, args.no_main, &args.program_args, emit_mode);
+        run_file(&file, args.trace, args.parse_only, args.ast, args.no_main, &args.program_args, emit_mode, args.check);
     } else {
         // Start REPL
         if let Err(e) = run_repl(args.trace) {
@@ -196,7 +196,7 @@ fn run_expr(source: &str, trace: bool, parse_only: bool, show_ast: bool, check: 
     }
 }
 
-fn run_file(path: &PathBuf, trace: bool, parse_only: bool, show_ast: bool, no_main: bool, program_args: &[String], emit_mode: EmitMode) {
+fn run_file(path: &PathBuf, trace: bool, parse_only: bool, show_ast: bool, no_main: bool, program_args: &[String], emit_mode: EmitMode, check_only: bool) {
     // Use the loader to handle `use` declarations (resolves imports)
     match load_file(path) {
         Ok(module) => {
@@ -219,6 +219,12 @@ fn run_file(path: &PathBuf, trace: bool, parse_only: bool, show_ast: bool, no_ma
             let mut type_checker = TypeChecker::new();
             if let Err(e) = type_checker.check_module(&module) {
                 eprintln!("{}: {}", "Type error".red().bold(), e);
+                return;
+            }
+
+            // If --check flag is set, just report success and return
+            if check_only {
+                println!("{}: {}", "Type check".green().bold(), "OK");
                 return;
             }
 

@@ -221,8 +221,6 @@ impl Pretty {
 
     /// Pretty print a type
     pub fn print_type(&mut self, ty: &Type) {
-        use crate::types::PrimType;
-        
         match ty {
             Type::Prim(p) => self.write(&format!("{:?}", p)),
             

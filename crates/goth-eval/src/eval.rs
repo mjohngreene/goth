@@ -299,7 +299,7 @@ impl Evaluator {
                 }
             }
             // Let: body is in tail position
-            Expr::Let { pattern, value, body } => {
+            Expr::Let { pattern, type_: _, value, body } => {
                 let val = self.eval_with_env(value, env)?;
                 let mut new_env = env.clone();
                 self.bind_pattern(pattern, val, &mut new_env)?;

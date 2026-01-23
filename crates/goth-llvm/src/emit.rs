@@ -40,6 +40,7 @@ impl LlvmContext {
     }
 
     /// Check if a local uses stack allocation
+    #[allow(dead_code)]
     fn is_stack_local(&self, local: &LocalId) -> bool {
         self.stack_locals.contains_key(local)
     }
@@ -201,23 +202,13 @@ pub fn emit_type(ty: &Type) -> Result<String> {
 }
 
 /// Emit LLVM constant
-fn emit_constant(ctx: &mut LlvmContext, constant: &Constant, ty: &Type) -> Result<(String, String)> {
-    let ssa = ctx.fresh_ssa();
-    let llvm_ty = emit_type(ty)?;
-
-    let code = match constant {
-        Constant::Int(n) => {
-            // No instruction needed for constants in LLVM - they're used inline
-            // But we need to track the value
-            return Ok((n.to_string(), String::new()));
-        }
+fn emit_constant(_ctx: &mut LlvmContext, constant: &Constant, _ty: &Type) -> Result<(String, String)> {
+    match constant {
+        Constant::Int(n) => Ok((n.to_string(), String::new())),
         Constant::Float(f) => {
             // LLVM requires floats to have a decimal point or be in hex format
-            // Use scientific notation but ensure there's always a decimal point
             let s = format!("{:e}", f);
-            // If the mantissa doesn't contain a decimal point, add ".0"
             let formatted = if !s.contains('.') {
-                // Find 'e' and insert ".0" before it
                 if let Some(e_pos) = s.find('e') {
                     format!("{}.0{}", &s[..e_pos], &s[e_pos..])
                 } else {
@@ -226,23 +217,18 @@ fn emit_constant(ctx: &mut LlvmContext, constant: &Constant, ty: &Type) -> Resul
             } else {
                 s
             };
-            return Ok((formatted, String::new()));
+            Ok((formatted, String::new()))
         }
         Constant::Bool(b) => {
             let val = if *b { "1" } else { "0" };
-            return Ok((val.to_string(), String::new()));
+            Ok((val.to_string(), String::new()))
         }
         Constant::String(s) => {
-            // Add string to the global string literals and return the name
-            let name = ctx.add_string(s);
-            return Ok((name, String::new()));
+            let name = _ctx.add_string(s);
+            Ok((name, String::new()))
         }
-        Constant::Unit => {
-            return Ok(("void".to_string(), String::new()));
-        }
-    };
-
-    Ok((ssa, code))
+        Constant::Unit => Ok(("void".to_string(), String::new())),
+    }
 }
 
 /// Emit operand - returns the LLVM value representation
@@ -285,7 +271,7 @@ fn emit_binop(
     let ssa = ctx.fresh_ssa();
     let llvm_ty = emit_type(ty)?;
 
-    let (op_name, result_ty) = if is_int_type(ty) {
+    let (op_name, _result_ty) = if is_int_type(ty) {
         let op_name = match op {
             goth_ast::op::BinOp::Add => "add",
             goth_ast::op::BinOp::Sub => "sub",
@@ -660,7 +646,7 @@ fn emit_stmt(ctx: &mut LlvmContext, stmt: &Stmt, output: &mut String) -> Result<
                         // For now, assume i64
                         let code = format!("  call void @goth_print_i64(i64 {})\n", arg_val);
                         output.push_str(&code);
-                        let code = "  call void @goth_print_newline()\n".to_string();
+                        output.push_str("  call void @goth_print_newline()\n");
                         return Ok(());
                     }
                     (ssa, String::new())
@@ -723,7 +709,7 @@ fn emit_stmt(ctx: &mut LlvmContext, stmt: &Stmt, output: &mut String) -> Result<
             }
         }
 
-        Rhs::TupleField(tup, idx) => {
+        Rhs::TupleField(tup, _idx) => {
             // For now, simplified - just pass through
             let tup_val = emit_operand(ctx, tup, &stmt.ty, output)?;
             (tup_val, String::new())
@@ -731,7 +717,7 @@ fn emit_stmt(ctx: &mut LlvmContext, stmt: &Stmt, output: &mut String) -> Result<
 
         Rhs::Array(elems) => {
             // Allocate array and fill
-            let ssa = ctx.fresh_ssa();
+            let _ssa = ctx.fresh_ssa();
             let len = elems.len();
 
             // Allocate
@@ -757,7 +743,7 @@ fn emit_stmt(ctx: &mut LlvmContext, stmt: &Stmt, output: &mut String) -> Result<
             for (i, elem) in elems.iter().enumerate() {
                 let elem_ty = Type::Prim(PrimType::I64);
                 let elem_val = emit_operand(ctx, elem, &elem_ty, output)?;
-                let elem_ptr = ctx.fresh_ssa();
+                let _elem_ptr = ctx.fresh_ssa();
                 let offset_ptr = ctx.fresh_ssa();
                 output.push_str(&format!(
                     "  {} = getelementptr i64, i64* {}, i64 {}\n",
@@ -774,7 +760,7 @@ fn emit_stmt(ctx: &mut LlvmContext, stmt: &Stmt, output: &mut String) -> Result<
             (alloc_ssa, String::new())
         }
 
-        Rhs::MakeClosure { func, captures } => {
+        Rhs::MakeClosure { func, captures: _ } => {
             // For now, just return function pointer
             let ssa = format!("@{}", func);
             (ssa, String::new())

@@ -122,6 +122,7 @@ impl LoweringContext {
     }
     
     /// Create a block from accumulated statements with a terminator
+    #[allow(dead_code)]
     fn make_block(&mut self, term: Terminator) -> Block {
         Block {
             stmts: self.take_stmts(),
@@ -236,7 +237,7 @@ pub fn lower_expr_to_operand(ctx: &mut LoweringContext, expr: &Expr) -> MirResul
             }
         }
 
-        Expr::Prim(name) => {
+        Expr::Prim(_name) => {
             // Primitive reference - handled at application site
             let prim_ty = Type::Prim(goth_ast::types::PrimType::I64); // Placeholder
             Ok((Operand::Const(Constant::Int(0)), prim_ty))
@@ -246,7 +247,7 @@ pub fn lower_expr_to_operand(ctx: &mut LoweringContext, expr: &Expr) -> MirResul
         
         Expr::BinOp(op, left, right) => {
             let (left_op, left_ty) = lower_expr_to_operand(ctx, left)?;
-            let (right_op, right_ty) = lower_expr_to_operand(ctx, right)?;
+            let (right_op, _right_ty) = lower_expr_to_operand(ctx, right)?;
             
             // Result type depends on operation
             // TODO: Proper type inference
@@ -288,7 +289,7 @@ pub fn lower_expr_to_operand(ctx: &mut LoweringContext, expr: &Expr) -> MirResul
         
         // ============ Let Bindings ============
 
-        Expr::Let { pattern, type_: _, value, body } => {
+        Expr::Let { pattern: _, type_: _, value, body } => {
             // Lower the value
             let (val_op, val_ty) = lower_expr_to_operand(ctx, value)?;
             
@@ -828,10 +829,6 @@ fn lower_literal(lit: &Literal) -> (Constant, Type) {
         Literal::String(s) => {
             (Constant::String(s.to_string()), Type::Prim(goth_ast::types::PrimType::String))
         }
-        _ => {
-            // TODO: Handle other literal types (Array, Tensor)
-            (Constant::Unit, Type::Tuple(vec![]))
-        }
     }
 }
 
@@ -876,7 +873,7 @@ fn lower_match_expr(
     use goth_ast::pattern::Pattern;
 
     // Lower the scrutinee
-    let (scrut_op, scrut_ty) = lower_expr_to_operand(ctx, scrutinee)?;
+    let (scrut_op, _scrut_ty) = lower_expr_to_operand(ctx, scrutinee)?;
 
     // Create result variable
     let result = ctx.fresh_local();

@@ -740,7 +740,7 @@ pub fn primitive_type(name: &str) -> Option<Type> {
             ))
         }
         // String concatenation
-        "strConcat" | "⧺" => {
+        "strConcat" => {
             // String → String → String (concatenate two strings)
             Some(Type::func_n(
                 [

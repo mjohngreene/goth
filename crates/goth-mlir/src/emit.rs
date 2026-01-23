@@ -177,9 +177,9 @@ fn emit_operand(ctx: &mut MlirContext, op: &Operand, output: &mut String) -> Res
             
             let const_code = emit_constant(ctx, c, &ty)?;
             output.push_str(&const_code);
-            
+
             // Extract the SSA value we just created
-            let ssa = ctx.fresh_ssa();
+            let _ssa = ctx.fresh_ssa();
             let prev_ssa = format!("%{}", ctx.next_ssa - 2);
             Ok(prev_ssa)
         }

@@ -29,8 +29,6 @@
 //! }
 //! ```
 
-use crate::mir::*;
-use crate::error::{MirError, MirResult};
 use goth_ast::expr::Expr;
 use std::collections::HashSet;
 
