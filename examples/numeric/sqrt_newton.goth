@@ -1,0 +1,23 @@
+# Square root via Newton-Raphson
+# x_{n+1} = (x_n + S/x_n) / 2
+# Precondition: S > 0
+# Postcondition: result ≈ √S
+# Property: Quadratic convergence
+# Method: Babylonian method / Heron's method
+
+# Newton step: given guess g and target S, return improved guess
+# newtonStep(g, S) = (g + S/g) / 2
+# De Bruijn: ₁ = g (guess), ₀ = S (target)
+╭─ newtonStep : F64 → F64 → F64
+╰─ (₁ + ₀ / ₁) / 2.0
+
+# sqrtIter(n, g, S) - iterate n times with guess g for sqrt(S)
+# De Bruijn: ₂ = n, ₁ = g, ₀ = S
+╭─ sqrtIter : I64 → F64 → F64 → F64
+╰─ if ₂ < 1 then ₁
+   else sqrtIter (₂ - 1) (newtonStep ₁ ₀) ₀
+
+# Input: S (number to take sqrt of)
+# Uses 15 iterations starting from S
+╭─ main : F64 → F64
+╰─ sqrtIter 15 ₀ ₀

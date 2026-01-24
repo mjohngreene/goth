@@ -1,0 +1,11 @@
+# Greatest Common Divisor (Euclidean algorithm)
+# Input: a b
+# Precondition: a >= 0, b >= 0
+# Postcondition: result divides both a and b
+# Postcondition: result >= 1 when a > 0 or b > 0
+# Property: gcd(a,0) = a
+# Property: gcd(a,b) = gcd(b, a mod b)
+# De Bruijn: ₁ = a, ₀ = b
+╭─ main : I64 → I64 → I64
+╰─ if ₀ = 0 then ₁
+   else main ₀ (₁ % ₀)

@@ -1,4 +1,0 @@
-# Echo with explicit IO effect
-╭─ main : () → ()
-│  ◇io
-╰─ print (readLine ⟨⟩)

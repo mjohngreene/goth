@@ -1,0 +1,4 @@
+# Check if even
+# Input: n → Output: true if n is even
+╭─ main : I64 → Bool
+╰─ (₀ % 2) = 0

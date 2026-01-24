@@ -1,0 +1,11 @@
+# Sum of digits in base 10
+# Precondition: n >= 0
+# Postcondition: result >= 0
+# Postcondition: result < n for n >= 10
+# Property: digit_sum(n) = (n mod 10) + digit_sum(n / 10)
+# Property: digit_sum(0) = 0
+# Related: Digital root = repeated digit sum until single digit
+
+╭─ main : I64 → I64
+╰─ if ₀ = 0 then 0
+   else (₀ % 10) + main (₀ / 10)

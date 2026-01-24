@@ -1,0 +1,9 @@
+# Fibonacci: F(n)
+# Precondition: n >= 0
+# Postcondition: result >= 0
+# Property: fib(n) = fib(n-1) + fib(n-2) for n > 1
+# Property: fib(0) = 0, fib(1) = 1
+# Sequence: 0, 1, 1, 2, 3, 5, 8, 13, 21, 34, ...
+╭─ main : I64 → I64
+╰─ if ₀ < 2 then ₀
+   else main (₀ - 1) + main (₀ - 2)

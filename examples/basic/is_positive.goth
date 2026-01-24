@@ -1,0 +1,4 @@
+# Check if positive
+# Input: n → Output: true if n > 0
+╭─ main : I64 → Bool
+╰─ ₀ > 0

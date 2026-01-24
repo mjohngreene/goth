@@ -1,0 +1,14 @@
+# Sum of squares: 1² + 2² + ... + n²
+# Precondition: n >= 0
+# Postcondition: result = n(n+1)(2n+1)/6
+# Property: Σ x² from 1 to n = n(n+1)(2n+1)/6
+# Recursive implementation
+
+# sumSq n i - sum squares from i to n
+# De Bruijn: ₁ = n (limit), ₀ = i (current)
+╭─ sumSq : I64 → I64 → I64
+╰─ if ₀ > ₁ then 0
+   else ₀ × ₀ + sumSq ₁ (₀ + 1)
+
+╭─ main : I64 → I64
+╰─ sumSq ₀ 1

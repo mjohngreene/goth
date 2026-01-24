@@ -1,0 +1,21 @@
+# Hyperoperation (Knuth's up-arrow notation)
+# Input: n a b
+# Precondition: n >= 0, a >= 0, b >= 0
+# Property: H_0(a,b) = b+1 (successor)
+# Property: H_1(a,b) = a+b (addition)
+# Property: H_2(a,b) = a*b (multiplication)
+# Property: H_3(a,b) = a^b (exponentiation)
+# Property: H_4(a,b) = tetration (tower of a's, b high)
+# Growth: Generalizes Ackermann, grows hyper-exponentially
+# De Bruijn: ₂ = n (operation level), ₁ = a, ₀ = b
+
+╭─ hyper : I64 → I64 → I64 → I64
+╰─ if ₂ = 0 then ₀ + 1
+   else if ₀ = 0 then
+     if ₂ = 1 then ₁
+     else if ₂ = 2 then 0
+     else 1
+   else hyper (₂ - 1) ₁ (hyper ₂ ₁ (₀ - 1))
+
+╭─ main : I64 → I64 → I64 → I64
+╰─ hyper ₂ ₁ ₀

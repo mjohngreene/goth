@@ -1,0 +1,13 @@
+# Map: double each element
+# Input: upper bound (tests range 1 to n)
+# Postcondition: result length = input length
+# Postcondition: each element is 2× original
+# Property: map f [] = []
+# Property: map f (x:xs) = f x : map f xs
+
+╭─ double : I64 → I64
+╰─ ₀ × 2
+
+# Return doubled list for range [1,n]
+╭─ main : I64 → T
+╰─ (range 1 (₀ + 1)) ▷ double

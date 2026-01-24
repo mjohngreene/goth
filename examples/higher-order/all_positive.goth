@@ -1,0 +1,11 @@
+# All: check if all elements satisfy predicate
+# Input: n (tests range 1 to n)
+# Postcondition: true iff all elements > 0
+# Property: all p [] = true
+# Property: all p (x:xs) = p x && all p xs
+
+╭─ isPositive : I64 → Bool
+╰─ ₀ > 0
+
+╭─ main : I64 → Bool
+╰─ all isPositive (range 1 (₀ + 1))

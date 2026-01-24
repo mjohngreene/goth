@@ -1,0 +1,13 @@
+# Least Common Multiple
+# Input: a b
+# Precondition: a > 0, b > 0
+# Postcondition: result is divisible by both a and b
+# Property: lcm(a,b) = a*b / gcd(a,b)
+# De Bruijn: ₁ = a, ₀ = b
+
+╭─ gcd : I64 → I64 → I64
+╰─ if ₀ = 0 then ₁
+   else gcd ₀ (₁ % ₀)
+
+╭─ main : I64 → I64 → I64
+╰─ (₁ × ₀) / gcd ₁ ₀

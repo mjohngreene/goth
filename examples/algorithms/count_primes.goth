@@ -1,0 +1,24 @@
+# Count primes up to n
+# Precondition: n >= 0
+# Postcondition: result = π(n) (prime counting function)
+# Example: π(10) = 4 (primes: 2, 3, 5, 7)
+
+╭─ hasDivisor : I64 → I64 → Bool
+╰─ if ₁ × ₁ > ₀ then ⊥
+   else if (₀ % ₁) = 0 then ⊤
+   else hasDivisor (₁ + 1) ₀
+
+╭─ isPrime : I64 → Bool
+╰─ if ₀ < 2 then ⊥
+   else ¬(hasDivisor 2 ₀)
+
+# countPrimes k n - count primes from k to n
+# De Bruijn: ₁ = k, ₀ = n
+╭─ countPrimes : I64 → I64 → I64
+╰─ if ₁ > ₀ then 0
+   else if isPrime ₁
+        then 1 + countPrimes (₁ + 1) ₀
+        else countPrimes (₁ + 1) ₀
+
+╭─ main : I64 → I64
+╰─ countPrimes 2 ₀

@@ -1,0 +1,19 @@
+# Sudan function
+# Input: n x y
+# Precondition: n >= 0, x >= 0, y >= 0
+# Postcondition: result >= x
+# Property: F_0(x,y) = x+y
+# Property: F_{n+1}(x,0) = x for n >= 0
+# Property: F_{n+1}(x,y+1) = F_n(F_{n+1}(x,y), F_{n+1}(x,y)+y+1)
+# Growth: Non-primitive recursive, similar to Ackermann
+# Related: Sudan function was discovered before Ackermann
+# De Bruijn: ₂ = n, ₁ = x, ₀ = y
+
+╭─ sudan : I64 → I64 → I64 → I64
+╰─ if ₂ = 0 then ₁ + ₀
+   else if ₀ = 0 then ₁
+   else let inner = sudan ₂ ₁ (₀ - 1)
+        in sudan (₂ - 1) inner (inner + ₀)
+
+╭─ main : I64 → I64 → I64 → I64
+╰─ sudan ₂ ₁ ₀

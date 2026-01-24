@@ -1,0 +1,17 @@
+# Takeuchi function (Tak function)
+# Input: x y z
+# Precondition: integers (can be negative)
+# Property: If x <= y, returns z
+# Property: Otherwise, deep mutual recursion
+# Famous: Used as a benchmark for function call overhead
+# Created by Ikuo Takeuchi in 1978
+# De Bruijn: ₂ = x, ₁ = y, ₀ = z
+
+╭─ tak : I64 → I64 → I64 → I64
+╰─ if ₂ < ₁ + 1 then ₀
+   else tak (tak (₂ - 1) ₁ ₀)
+            (tak (₁ - 1) ₀ ₂)
+            (tak (₀ - 1) ₂ ₁)
+
+╭─ main : I64 → I64 → I64 → I64
+╰─ tak ₂ ₁ ₀

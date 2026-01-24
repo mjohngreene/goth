@@ -1,0 +1,12 @@
+# Fold: product of all elements (factorial via iteration)
+# Input: n
+# Postcondition: result = n!
+# Property: fold (*) 1 [1..n] = n!
+# Note: Recursive implementation since fold isn't in type checker
+
+╭─ prodRec : I64 → I64 → I64
+╰─ if ₁ > ₀ then 1
+   else ₁ × prodRec (₁ + 1) ₀
+
+╭─ main : I64 → I64
+╰─ prodRec 1 ₀
