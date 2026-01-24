@@ -1,0 +1,10 @@
+# Apply a function twice: f(f(x))
+# Demonstrates: higher-order function application
+# Property: twice f x = f(f(x))
+# Example: twice double 3 = double(double(3)) = 12
+
+╭─ double : I64 → I64
+╰─ ₀ × 2
+
+╭─ main : I64 → I64
+╰─ double (double ₀)

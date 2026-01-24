@@ -1,0 +1,70 @@
+{
+  "category": "algorithms",
+  "description": "Classic CS algorithms",
+  "tests": [
+    {
+      "name": "isPrime",
+      "file": "examples/algorithms/isPrime.goth",
+      "description": "Primality test",
+      "cases": [
+        {"input": [2], "expected": "⊤"},
+        {"input": [17], "expected": "⊤"},
+        {"input": [15], "expected": "⊥"},
+        {"input": [1], "expected": "⊥"},
+        {"input": [97], "expected": "⊤"}
+      ]
+    },
+    {
+      "name": "count_primes",
+      "file": "examples/algorithms/count_primes.goth",
+      "description": "Count primes up to n",
+      "cases": [
+        {"input": [10], "expected": 4},
+        {"input": [20], "expected": 8},
+        {"input": [100], "expected": 25}
+      ]
+    },
+    {
+      "name": "nth_prime",
+      "file": "examples/algorithms/nth_prime.goth",
+      "description": "Find the nth prime",
+      "cases": [
+        {"input": [1], "expected": 2},
+        {"input": [4], "expected": 7},
+        {"input": [10], "expected": 29},
+        {"input": [25], "expected": 97}
+      ]
+    },
+    {
+      "name": "isqrt",
+      "file": "examples/algorithms/isqrt.goth",
+      "description": "Integer square root",
+      "cases": [
+        {"input": [0], "expected": 0},
+        {"input": [1], "expected": 1},
+        {"input": [16], "expected": 4},
+        {"input": [50], "expected": 7}
+      ]
+    },
+    {
+      "name": "modpow",
+      "file": "examples/algorithms/modpow.goth",
+      "description": "Modular exponentiation",
+      "cases": [
+        {"input": [2, 10, 1000], "expected": 24},
+        {"input": [3, 5, 100], "expected": 43},
+        {"input": [7, 0, 13], "expected": 1}
+      ]
+    },
+    {
+      "name": "binary_search",
+      "file": "examples/algorithms/binary_search.goth",
+      "description": "Binary search in range",
+      "cases": [
+        {"input": [10, 5], "expected": 5},
+        {"input": [10, 7], "expected": 7},
+        {"input": [10, 15], "expected": -1}
+      ]
+    }
+  ]
+}

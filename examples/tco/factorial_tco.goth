@@ -1,0 +1,16 @@
+# Factorial - TAIL RECURSIVE with accumulator
+# The recursive call is in tail position
+#
+# Pattern: recursive_call with accumulated product  ← IS tail recursive
+#
+# Precondition: n >= 0
+# Postcondition: result = n!
+
+# factAcc n acc - compute n! with accumulator
+# De Bruijn: ₁ = n (countdown), ₀ = acc (running product)
+╭─ factAcc : I64 → I64 → I64
+╰─ if ₁ < 2 then ₀
+   else factAcc (₁ - 1) (₁ × ₀)
+
+╭─ main : I64 → I64
+╰─ factAcc ₀ 1

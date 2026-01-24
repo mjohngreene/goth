@@ -1,0 +1,10 @@
+# Count elements satisfying predicate
+# Input: n (counts even numbers in 1 to n)
+# Postcondition: result = n/2 (for positive n)
+# Property: count p xs = length (filter p xs)
+
+╭─ isEven : I64 → Bool
+╰─ (₀ % 2) = 0
+
+╭─ main : I64 → I64
+╰─ len ((range 1 (₀ + 1)) ▸ isEven)

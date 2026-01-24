@@ -1,0 +1,13 @@
+# Fold: sum all elements (1 to n)
+# Input: n
+# Postcondition: result = n*(n+1)/2
+# Property: foldl f z [] = z
+# Property: foldl f z (x:xs) = foldl f (f z x) xs
+# Note: Recursive implementation since fold isn't in type checker
+
+╭─ sumRec : I64 → I64 → I64
+╰─ if ₁ > ₀ then 0
+   else ₁ + sumRec (₁ + 1) ₀
+
+╭─ main : I64 → I64
+╰─ sumRec 1 ₀

@@ -1,0 +1,15 @@
+# Length of range - TAIL RECURSIVE with accumulator
+#
+# Pattern: recursive_call with accumulated count  ← IS tail recursive
+#
+# Precondition: n >= 0
+# Postcondition: result = n
+
+# countAcc n acc
+# De Bruijn: ₁ = n (countdown), ₀ = acc (count)
+╭─ countAcc : I64 → I64 → I64
+╰─ if ₁ < 1 then ₀
+   else countAcc (₁ - 1) (₀ + 1)
+
+╭─ main : I64 → I64
+╰─ countAcc ₀ 0

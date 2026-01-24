@@ -2,6 +2,7 @@ name: Release
 
 on:
   push:
+    branches: [ master, main ]
     tags:
       - 'v*'
 
@@ -27,7 +28,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install Rust toolchain
-      uses: dtolnay/rust-action@stable
+      uses: dtolnay/rust-toolchain@stable
       with:
         targets: ${{ matrix.target }}
 
@@ -68,12 +69,55 @@ jobs:
       with:
         path: artifacts
 
-    - name: Create Release
+    - name: Create Tagged Release
+      if: startsWith(github.ref, 'refs/tags/v')
       uses: softprops/action-gh-release@v1
       with:
         files: artifacts/**/*.tar.gz
         generate_release_notes: true
         draft: false
         prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Update Latest Release
+      if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: latest
+        name: Latest Build
+        files: artifacts/**/*.tar.gz
+        body: |
+          Automated build from master branch.
+
+          **Commit:** ${{ github.sha }}
+          **Date:** ${{ github.event.head_commit.timestamp }}
+
+          ## Installation
+
+          ```bash
+          # Linux x86_64
+          curl -L https://github.com/${{ github.repository }}/releases/download/latest/goth-linux-x86_64.tar.gz | tar xz
+
+          # macOS ARM64 (M1/M2/M3)
+          curl -L https://github.com/${{ github.repository }}/releases/download/latest/goth-macos-arm64.tar.gz | tar xz
+          ```
+
+          ## Usage for LLMs
+
+          See [CLAUDE-SKILLS.md](docs/CLAUDE-SKILLS.md) for LLM code generation guidance.
+
+          ```bash
+          # Run a Goth program
+          ./goth program.goth arg1 arg2
+
+          # Run from JSON AST
+          ./goth --from-json program.json arg1
+
+          # Generate JSON AST from Goth
+          ./goth --to-json program.goth
+          ```
+        draft: false
+        prerelease: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

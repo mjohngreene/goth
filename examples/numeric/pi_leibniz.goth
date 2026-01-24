@@ -1,0 +1,21 @@
+# Pi via Leibniz formula
+# π/4 = 1 - 1/3 + 1/5 - 1/7 + ...
+# Precondition: n >= 0 (number of terms - 1)
+# Postcondition: result ≈ π (converges slowly)
+# Property: (-1)^k / (2k+1) summed gives π/4
+# Famous: Gregory-Leibniz series
+
+# Compute (-1)^k / (2k+1)
+╭─ leibnizTerm : I64 → F64
+╰─ if (₀ % 2) = 0
+   then 1.0 / toFloat (2 × ₀ + 1)
+   else (0.0 - 1.0) / toFloat (2 × ₀ + 1)
+
+# Sum terms from k to n
+# De Bruijn: ₁ = n (limit), ₀ = k (current)
+╭─ leibnizSum : I64 → I64 → F64
+╰─ if ₀ > ₁ then 0.0
+   else leibnizTerm ₀ + leibnizSum ₁ (₀ + 1)
+
+╭─ main : I64 → F64
+╰─ 4.0 × leibnizSum ₀ 0

@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ master, main, "claude/*" ]
+    branches: [ master, main ]
   pull_request:
     branches: [ master, main ]
 
@@ -24,7 +24,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install Rust toolchain
-      uses: dtolnay/rust-action@stable
+      uses: dtolnay/rust-toolchain@stable
       with:
         components: clippy, rustfmt
 
@@ -60,14 +60,16 @@ jobs:
     - name: Test examples
       working-directory: crates
       run: |
-        echo "Testing Ackermann..."
-        cargo run --quiet --package goth-cli -- ../examples/ackermann.goth 3 3
-        echo "Testing Fibonacci..."
-        cargo run --quiet --package goth-cli -- ../examples/fibonacci.goth 10
-        echo "Testing Sieve..."
-        cargo run --quiet --package goth-cli -- ../examples/sieve.goth 20
-        echo "Testing JSON workflow..."
-        cargo run --quiet --package goth-cli -- --from-json ../examples/json/ackermann.json 2 3
+        echo "Testing basic/identity..."
+        cargo run --quiet --package goth-cli -- "$(pwd)/../examples/basic/identity.goth" 42
+        echo "Testing recursion/factorial..."
+        cargo run --quiet --package goth-cli -- "$(pwd)/../examples/recursion/factorial.goth" 5
+        echo "Testing recursion/ackermann..."
+        cargo run --quiet --package goth-cli -- "$(pwd)/../examples/recursion/ackermann.goth" 3 4
+        echo "Testing algorithms/isPrime..."
+        cargo run --quiet --package goth-cli -- "$(pwd)/../examples/algorithms/isPrime.goth" 17
+        echo "Testing numeric/gamma_fact..."
+        cargo run --quiet --package goth-cli -- "$(pwd)/../examples/numeric/gamma_fact.goth" 5.0
 
     - name: Upload binary artifact
       uses: actions/upload-artifact@v4

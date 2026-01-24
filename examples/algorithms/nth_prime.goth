@@ -1,0 +1,25 @@
+# Find the nth prime number
+# Precondition: n >= 1
+# Postcondition: result is the nth prime
+# Example: nthPrime(1) = 2, nthPrime(4) = 7, nthPrime(10) = 29
+
+╭─ hasDivisor : I64 → I64 → Bool
+╰─ if ₁ × ₁ > ₀ then ⊥
+   else if (₀ % ₁) = 0 then ⊤
+   else hasDivisor (₁ + 1) ₀
+
+╭─ isPrime : I64 → Bool
+╰─ if ₀ < 2 then ⊥
+   else ¬(hasDivisor 2 ₀)
+
+# nthPrimeFrom count candidate
+# Find the count-th prime starting from candidate
+# De Bruijn: ₁ = count remaining, ₀ = current candidate
+╭─ nthPrimeFrom : I64 → I64 → I64
+╰─ if isPrime ₀
+   then if ₁ = 1 then ₀
+        else nthPrimeFrom (₁ - 1) (₀ + 1)
+   else nthPrimeFrom ₁ (₀ + 1)
+
+╭─ main : I64 → I64
+╰─ nthPrimeFrom ₀ 2

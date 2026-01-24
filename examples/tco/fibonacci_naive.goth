@@ -1,0 +1,15 @@
+# Fibonacci - NAIVE (doubly recursive, very inefficient)
+# Two recursive calls, neither in tail position
+# Exponential time complexity O(2^n)
+#
+# Pattern: recursive_call + recursive_call  ← NOT tail recursive (also exponential!)
+#
+# Precondition: n >= 0
+# Postcondition: result = F(n)
+
+╭─ fib : I64 → I64
+╰─ if ₀ < 2 then ₀
+   else fib (₀ - 1) + fib (₀ - 2)
+
+╭─ main : I64 → I64
+╰─ fib ₀

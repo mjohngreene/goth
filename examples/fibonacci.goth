@@ -1,9 +1,0 @@
-# Recursive Fibonacci
-# Usage: goth fibonacci.goth <n>
-# Example: goth fibonacci.goth 10  →  55
-
-╭─ fib : I64 → I64
-╰─ if ₀ ≤ 1 then ₀ else fib (₀ - 1) + fib (₀ - 2)
-
-╭─ main : I64 → I64
-╰─ fib ₀

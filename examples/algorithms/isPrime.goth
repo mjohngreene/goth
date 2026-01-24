@@ -1,0 +1,18 @@
+# Primality test by trial division
+# Precondition: n >= 0
+# Postcondition: true iff n is prime
+
+# Check if d divides n (where d > 1)
+# hasDivisor d n - check divisors from d to sqrt(n)
+# De Bruijn: ₁ = d (current divisor), ₀ = n (number to test)
+╭─ hasDivisor : I64 → I64 → Bool
+╰─ if ₁ × ₁ > ₀ then ⊥
+   else if (₀ % ₁) = 0 then ⊤
+   else hasDivisor (₁ + 1) ₀
+
+╭─ isPrime : I64 → Bool
+╰─ if ₀ < 2 then ⊥
+   else ¬(hasDivisor 2 ₀)
+
+╭─ main : I64 → Bool
+╰─ isPrime ₀

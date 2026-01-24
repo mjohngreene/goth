@@ -1,0 +1,14 @@
+# Length of range - NAIVE (non-tail-recursive)
+# Counts from 1 to n (simulating list length)
+#
+# Pattern: 1 + recursive_call  ← NOT tail recursive
+#
+# Precondition: n >= 0
+# Postcondition: result = n
+
+╭─ countTo : I64 → I64
+╰─ if ₀ < 1 then 0
+   else 1 + countTo (₀ - 1)
+
+╭─ main : I64 → I64
+╰─ countTo ₀

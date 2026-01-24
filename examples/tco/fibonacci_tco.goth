@@ -1,0 +1,17 @@
+# Fibonacci - TAIL RECURSIVE with two accumulators
+# Single recursive call in tail position
+# Linear time complexity O(n)
+#
+# Pattern: recursive_call with accumulated values  ← IS tail recursive
+#
+# Precondition: n >= 0
+# Postcondition: result = F(n)
+
+# fibAcc n a b - compute F(n) where a=F(k), b=F(k+1)
+# De Bruijn: ₂ = n (countdown), ₁ = a (F(k)), ₀ = b (F(k+1))
+╭─ fibAcc : I64 → I64 → I64 → I64
+╰─ if ₂ = 0 then ₁
+   else fibAcc (₂ - 1) ₀ (₁ + ₀)
+
+╭─ main : I64 → I64
+╰─ fibAcc ₀ 0 1

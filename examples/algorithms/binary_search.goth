@@ -1,0 +1,18 @@
+# Binary search for target in sorted range [lo, hi]
+# Returns target if found, -1 if not found
+# Precondition: searching in conceptual sorted array
+# Example: search for 7 in [0,10] returns 7
+
+# bsearch lo hi target
+# De Bruijn: ₂ = lo, ₁ = hi, ₀ = target
+╭─ bsearch : I64 → I64 → I64 → I64
+╰─ if ₂ > ₁ then 0 - 1
+   else if ((₂ + ₁) / 2) = ₀ then (₂ + ₁) / 2
+   else if ((₂ + ₁) / 2) > ₀
+        then bsearch ₂ ((₂ + ₁) / 2 - 1) ₀
+        else bsearch ((₂ + ₁) / 2 + 1) ₁ ₀
+
+# main n target - search for target in range [0, n]
+# De Bruijn: ₁ = n (range), ₀ = target
+╭─ main : I64 → I64 → I64
+╰─ bsearch 0 ₁ ₀

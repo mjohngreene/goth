@@ -1,0 +1,12 @@
+# Filter: keep only positive numbers
+# Input: upper bound for range starting at -n
+# Postcondition: all elements in result are > 0
+# Property: filter p [] = []
+# Property: filter p (x:xs) = x : filter p xs if p x
+# Property: filter p (x:xs) = filter p xs if not p x
+
+╭─ isPositive : I64 → Bool
+╰─ ₀ > 0
+
+╭─ main : I64 → T
+╰─ (range (0 - ₀) (₀ + 1)) ▸ isPositive

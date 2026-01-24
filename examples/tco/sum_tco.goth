@@ -1,0 +1,16 @@
+# Sum 1 to N - TAIL RECURSIVE with accumulator
+# The recursive call is in tail position
+#
+# Pattern: recursive_call with accumulated sum  ← IS tail recursive
+#
+# Precondition: n >= 0
+# Postcondition: result = n(n+1)/2
+
+# sumAcc n acc - sum from n down to 1
+# De Bruijn: ₁ = n (countdown), ₀ = acc (running sum)
+╭─ sumAcc : I64 → I64 → I64
+╰─ if ₁ < 1 then ₀
+   else sumAcc (₁ - 1) (₀ + ₁)
+
+╭─ main : I64 → I64
+╰─ sumAcc ₀ 0
