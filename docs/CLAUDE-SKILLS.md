@@ -13,6 +13,36 @@ Goth is a functional programming language designed for LLM interaction. The key 
 3. **Bidirectional** - JSON → Goth syntax → JSON roundtrips perfectly
 4. **LLM-native** - Structured output is what LLMs do best
 
+## Installation
+
+Download the latest binary for your platform:
+
+```bash
+# Linux x86_64
+curl -L https://github.com/sigilante/goth/releases/download/latest/goth-linux-x86_64.tar.gz | tar xz
+sudo mv goth /usr/local/bin/
+
+# macOS ARM64 (M1/M2/M3)
+curl -L https://github.com/sigilante/goth/releases/download/latest/goth-macos-arm64.tar.gz | tar xz
+sudo mv goth /usr/local/bin/
+
+# Or run directly without installing
+./goth program.goth arg1 arg2
+```
+
+For tagged releases (e.g., `v0.1.0`):
+
+```bash
+# Replace 'latest' with the version tag
+curl -L https://github.com/sigilante/goth/releases/download/v0.1.0/goth-linux-x86_64.tar.gz | tar xz
+```
+
+**Available platforms:**
+| Platform | Artifact |
+|----------|----------|
+| Linux x86_64 | `goth-linux-x86_64.tar.gz` |
+| macOS ARM64 | `goth-macos-arm64.tar.gz` |
+
 ## Workflow
 
 ```bash
