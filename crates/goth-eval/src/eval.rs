@@ -367,7 +367,8 @@ impl Evaluator {
 
     fn match_pattern(&self, pattern: &Pattern, val: &Value, env: &mut Env) -> EvalResult<bool> {
         match pattern {
-            Pattern::Wildcard => Ok(true),
+            // Wildcards must push to env to maintain De Bruijn index alignment with resolver
+            Pattern::Wildcard => { env.push(val.clone()); Ok(true) }
             Pattern::Var(_) => { env.push(val.clone()); Ok(true) }
             Pattern::Lit(lit) => { let lit_val = self.eval_literal(lit); Ok(val.deep_eq(&lit_val)) }
             Pattern::Array(pats) => { match val { Value::Tensor(t) => { if t.rank() != 1 || t.len() != pats.len() { return Ok(false); } for (i, pat) in pats.iter().enumerate() { let elem = t.get_flat(i).unwrap(); if !self.match_pattern(pat, &elem, env)? { return Ok(false); } } Ok(true) } _ => Ok(false) } }
