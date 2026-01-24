@@ -67,7 +67,7 @@ struct Args {
     #[arg(short, long)]
     ast: bool,
 
-    /// Type check expressions before evaluation
+    /// Type check before evaluation (off by default for interpreter use)
     #[arg(long, short = 'c')]
     check: bool,
 
@@ -132,7 +132,7 @@ fn main() {
         return;
     } else if let Some(file) = args.file {
         // Run file
-        run_file(&file, args.trace, args.parse_only, args.ast, args.no_main, &args.program_args);
+        run_file(&file, args.trace, args.parse_only, args.ast, args.no_main, args.check, &args.program_args);
     } else {
         // Start REPL
         if let Err(e) = run_repl(args.trace) {
@@ -197,7 +197,7 @@ fn run_expr(source: &str, trace: bool, parse_only: bool, show_ast: bool, check: 
     }
 }
 
-fn run_file(path: &PathBuf, trace: bool, parse_only: bool, show_ast: bool, no_main: bool, program_args: &[String]) {
+fn run_file(path: &PathBuf, trace: bool, parse_only: bool, show_ast: bool, no_main: bool, check: bool, program_args: &[String]) {
     // Use the loader to handle `use` declarations (resolves imports)
     match load_file(path) {
         Ok(module) => {
@@ -216,11 +216,13 @@ fn run_file(path: &PathBuf, trace: bool, parse_only: bool, show_ast: bool, no_ma
                 println!("{} {:#?}", "Resolved AST:".cyan().bold(), module);
             }
 
-            // Type check the module
-            let mut type_checker = TypeChecker::new();
-            if let Err(e) = type_checker.check_module(&module) {
-                eprintln!("{}: {}", "Type error".red().bold(), e);
-                return;
+            // Type check the module only if --check flag is set
+            if check {
+                let mut type_checker = TypeChecker::new();
+                if let Err(e) = type_checker.check_module(&module) {
+                    eprintln!("{}: {}", "Type error".red().bold(), e);
+                    return;
+                }
             }
 
             if no_main {

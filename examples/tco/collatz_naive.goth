@@ -1,0 +1,17 @@
+# Collatz sequence length - NAIVE (non-tail-recursive)
+# The addition happens AFTER the recursive call, preventing TCO
+# Will overflow stack for large inputs (e.g., n=27 needs 111 steps)
+#
+# Pattern: 1 + recursive_call  ← NOT tail recursive
+#
+# Precondition: n > 0
+# Postcondition: result = number of steps to reach 1
+
+╭─ collatz : I64 → I64
+╰─ if ₀ = 1 then 0
+   else if (₀ % 2) = 0
+        then 1 + collatz (₀ / 2)
+        else 1 + collatz (3 × ₀ + 1)
+
+╭─ main : I64 → I64
+╰─ collatz ₀
