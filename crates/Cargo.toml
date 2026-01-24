@@ -6,11 +6,12 @@ members = [
     "goth-parse",
     "goth-cli",
     "goth-check",
-    "goth-mir",
-    "goth-mlir",
-    "goth-llvm",
     "goth-server",
 ]
+# Shelved for now (focus on interpreter):
+# "goth-mir",
+# "goth-mlir",
+# "goth-llvm",
 
 [workspace.package]
 version = "0.1.0"

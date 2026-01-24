@@ -1,0 +1,14 @@
+# Factorial - NAIVE (non-tail-recursive)
+# The multiplication happens AFTER the recursive call
+#
+# Pattern: n × recursive_call  ← NOT tail recursive
+#
+# Precondition: n >= 0
+# Postcondition: result = n!
+
+╭─ fact : I64 → I64
+╰─ if ₀ < 2 then 1
+   else ₀ × fact (₀ - 1)
+
+╭─ main : I64 → I64
+╰─ fact ₀

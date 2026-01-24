@@ -1,0 +1,19 @@
+# Collatz sequence length - TAIL RECURSIVE with accumulator
+# The recursive call is in tail position (last thing evaluated)
+# Can handle arbitrary depth without stack overflow
+#
+# Pattern: recursive_call with accumulated result  ← IS tail recursive
+#
+# Precondition: n > 0
+# Postcondition: result = number of steps to reach 1
+
+# collatzAcc n acc - count steps with accumulator
+# De Bruijn: ₁ = n (current value), ₀ = acc (step count)
+╭─ collatzAcc : I64 → I64 → I64
+╰─ if ₁ = 1 then ₀
+   else if (₁ % 2) = 0
+        then collatzAcc (₁ / 2) (₀ + 1)
+        else collatzAcc (3 × ₁ + 1) (₀ + 1)
+
+╭─ main : I64 → I64
+╰─ collatzAcc ₀ 0

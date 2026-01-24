@@ -1,0 +1,4 @@
+# Absolute value
+# Input: n → Output: |n|
+╭─ main : I64 → I64
+╰─ if ₀ < 0 then 0 - ₀ else ₀

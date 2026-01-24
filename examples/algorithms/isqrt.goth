@@ -1,0 +1,14 @@
+# Integer square root (floor of √n)
+# Precondition: n >= 0
+# Postcondition: result² ≤ n < (result+1)²
+# Example: isqrt(10) = 3, isqrt(16) = 4
+
+# Simple iteration from 0 upward
+# isqrtUp k n - find first k where (k+1)² > n
+# De Bruijn: ₁ = k, ₀ = n
+╭─ isqrtUp : I64 → I64 → I64
+╰─ if (₁ + 1) × (₁ + 1) > ₀ then ₁
+   else isqrtUp (₁ + 1) ₀
+
+╭─ main : I64 → I64
+╰─ isqrtUp 0 ₀

@@ -211,9 +211,9 @@ mod tests {
     #[test]
     fn test_multi_arg_uncertain_function() {
         // Function that creates uncertain value from two args
-        // With arity 2: ₀ refers to first arg, ₁ refers to second arg
-        // So ₀ ± ₁ means first_arg ± second_arg
-        let body = Expr::binop(BinOp::PlusMinus, Expr::idx(0), Expr::idx(1));
+        // With arity 2: ₁ refers to first arg, ₀ refers to second (last) arg
+        // So ₁ ± ₀ means first_arg ± second_arg
+        let body = Expr::binop(BinOp::PlusMinus, Expr::idx(1), Expr::idx(0));
         let closure = Value::closure(2, body, Env::new());
         
         let mut e = Evaluator::new();
@@ -421,5 +421,44 @@ mod tests {
             }
             _ => panic!("Expected tensor of chars"),
         }
+    }
+
+    #[test]
+    fn test_wildcard_binding_shifts_indices() {
+        // Wildcards must push to env to maintain De Bruijn index alignment.
+        // let x = 1 in let _ = 2 in x
+        // After wildcard, x is at index 1 (wildcard at 0).
+        let mut e = Evaluator::new();
+        let expr = Expr::let_(
+            Pattern::var("x"),
+            Expr::int(1),
+            Expr::let_(
+                Pattern::Wildcard,
+                Expr::int(2),
+                Expr::idx(1), // x is at index 1 after wildcard
+            ),
+        );
+        assert_eq!(e.eval(&expr).unwrap(), Value::Int(1));
+    }
+
+    #[test]
+    fn test_multiple_wildcards() {
+        // let x = 10 in let _ = 20 in let _ = 30 in x
+        // After two wildcards, x is at index 2.
+        let mut e = Evaluator::new();
+        let expr = Expr::let_(
+            Pattern::var("x"),
+            Expr::int(10),
+            Expr::let_(
+                Pattern::Wildcard,
+                Expr::int(20),
+                Expr::let_(
+                    Pattern::Wildcard,
+                    Expr::int(30),
+                    Expr::idx(2), // x is at index 2 after two wildcards
+                ),
+            ),
+        );
+        assert_eq!(e.eval(&expr).unwrap(), Value::Int(10));
     }
 }

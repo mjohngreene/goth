@@ -1,0 +1,14 @@
+# Function composition: (f . g)(x) = f(g(x))
+# Demonstrates: higher-order functions
+# Property: (f . g)(x) = f(g(x))
+# Property: (f . id) = f = (id . f)
+# Example: square(double(3)) = square(6) = 36
+
+╭─ double : I64 → I64
+╰─ ₀ × 2
+
+╭─ square : I64 → I64
+╰─ ₀ × ₀
+
+╭─ main : I64 → I64
+╰─ square (double ₀)

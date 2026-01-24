@@ -1,0 +1,15 @@
+# McCarthy 91 function
+# Precondition: n is an integer
+# Postcondition: If n > 100, result = n - 10
+# Postcondition: If n <= 100, result = 91
+# Property: M(n) = n - 10 if n > 100
+# Property: M(n) = M(M(n+11)) if n <= 100
+# Famous: Classic example of nested recursion
+# Created by John McCarthy to verify formal methods
+
+╭─ mc91 : I64 → I64
+╰─ if ₀ > 100 then ₀ - 10
+   else mc91 (mc91 (₀ + 11))
+
+╭─ main : I64 → I64
+╰─ mc91 ₀

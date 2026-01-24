@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build & Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        # macos-latest is M-series (ARM64) on GitHub Actions
+        # ubuntu-latest is x86_64
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy, rustfmt
+
+    - name: Cache cargo registry
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          crates/target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: Build
+      working-directory: crates
+      run: cargo build --release
+
+    - name: Run tests
+      working-directory: crates
+      run: cargo test --workspace
+
+    - name: Run clippy
+      working-directory: crates
+      run: cargo clippy --workspace -- -D warnings
+      continue-on-error: true  # Don't fail on clippy warnings for now
+
+    - name: Check formatting
+      working-directory: crates
+      run: cargo fmt --all -- --check
+      continue-on-error: true  # Don't fail on format issues for now
+
+    - name: Test examples
+      working-directory: crates
+      run: |
+        echo "Testing basic/identity..."
+        cargo run --quiet --package goth-cli -- "$(pwd)/../examples/basic/identity.goth" 42
+        echo "Testing recursion/factorial..."
+        cargo run --quiet --package goth-cli -- "$(pwd)/../examples/recursion/factorial.goth" 5
+        echo "Testing recursion/ackermann..."
+        cargo run --quiet --package goth-cli -- "$(pwd)/../examples/recursion/ackermann.goth" 3 4
+        echo "Testing algorithms/isPrime..."
+        cargo run --quiet --package goth-cli -- "$(pwd)/../examples/algorithms/isPrime.goth" 17
+        echo "Testing numeric/gamma_fact..."
+        cargo run --quiet --package goth-cli -- "$(pwd)/../examples/numeric/gamma_fact.goth" 5.0
+
+    - name: Upload binary artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: goth-${{ matrix.os }}
+        path: crates/target/release/goth
+        if-no-files-found: error

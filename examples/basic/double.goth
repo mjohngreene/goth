@@ -1,0 +1,4 @@
+# Double the input
+# Input: n → Output: 2n
+╭─ main : I64 → I64
+╰─ ₀ × 2

@@ -1,0 +1,11 @@
+# Any: check if any element satisfies predicate
+# Input: n (tests range -n to n)
+# Postcondition: true iff any element < 0
+# Property: any p [] = false
+# Property: any p (x:xs) = p x || any p xs
+
+╭─ isNegative : I64 → Bool
+╰─ ₀ < 0
+
+╭─ main : I64 → Bool
+╰─ any isNegative (range (0 - ₀) (₀ + 1))

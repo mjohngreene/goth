@@ -1,0 +1,24 @@
+# Exponential via Taylor series
+# e^x = 1 + x + x²/2! + x³/3! + ...
+# Precondition: any x
+# Postcondition: result ≈ e^x
+# Note: Demonstrates Taylor series approximation
+# Uses: term(n) = x^n / n!
+
+╭─ factorial : I64 → F64
+╰─ if ₀ < 2 then 1.0
+   else (toFloat ₀) × factorial (₀ - 1)
+
+╭─ pow : F64 → I64 → F64
+╰─ if ₀ = 0 then 1.0
+   else ₁ × pow ₁ (₀ - 1)
+
+╭─ term : F64 → I64 → F64
+╰─ pow ₁ ₀ / factorial ₀
+
+╭─ expSum : F64 → I64 → I64 → F64
+╰─ if ₁ > ₀ then 0.0
+   else term ₂ ₁ + expSum ₂ (₁ + 1) ₀
+
+╭─ main : F64 → F64
+╰─ expSum ₀ 0 20

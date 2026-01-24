@@ -1,0 +1,8 @@
+# Gamma at half-integers
+# Property: Γ(1/2) = √π ≈ 1.7724538509
+# Property: Γ(3/2) = (1/2)√π ≈ 0.8862269255
+# Property: Γ(n+1/2) = (n-1/2)(n-3/2)...·(1/2)·√π
+# Famous: Connection between Gamma and pi
+
+╭─ main : F64 → F64
+╰─ Γ ₀

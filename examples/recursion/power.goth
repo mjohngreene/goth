@@ -1,0 +1,10 @@
+# Power: base^exp
+# Input: base exp
+# Precondition: exp >= 0
+# Postcondition: result = base^exp
+# Property: pow(b,0) = 1
+# Property: pow(b,e) = b * pow(b,e-1) for e > 0
+# De Bruijn: ₁ = base, ₀ = exp
+╭─ main : I64 → I64 → I64
+╰─ if ₀ = 0 then 1
+   else ₁ × main ₁ (₀ - 1)

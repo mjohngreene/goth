@@ -1,0 +1,5 @@
+# Maximum of two numbers
+# Input: a b → Output: max(a, b)
+# De Bruijn: ₁ = a (first arg), ₀ = b (second arg)
+╭─ main : I64 → I64 → I64
+╰─ if ₁ > ₀ then ₁ else ₀

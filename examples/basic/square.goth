@@ -1,0 +1,4 @@
+# Square the input
+# Input: n → Output: n²
+╭─ main : I64 → I64
+╰─ ₀ × ₀

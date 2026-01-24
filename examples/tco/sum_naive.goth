@@ -1,0 +1,14 @@
+# Sum 1 to N - NAIVE (non-tail-recursive)
+# The addition happens AFTER the recursive call
+#
+# Pattern: n + recursive_call  ← NOT tail recursive
+#
+# Precondition: n >= 0
+# Postcondition: result = n(n+1)/2
+
+╭─ sumTo : I64 → I64
+╰─ if ₀ < 1 then 0
+   else ₀ + sumTo (₀ - 1)
+
+╭─ main : I64 → I64
+╰─ sumTo ₀

@@ -1,0 +1,21 @@
+# Pipeline: compose multiple operations
+# Input: n
+# Pipeline: range → filter evens → map square → sum
+# Postcondition: sum of squares of even numbers from 1 to n
+# Example: n=6 → [2,4,6] → [4,16,36] → 56
+
+╭─ isEven : I64 → Bool
+╰─ (₀ % 2) = 0
+
+╭─ square : I64 → I64
+╰─ ₀ × ₀
+
+# Recursive sum of squares of evens
+╭─ sumSqEven : I64 → I64 → I64
+╰─ if ₁ > ₀ then 0
+   else if isEven ₁
+        then (square ₁) + sumSqEven (₁ + 1) ₀
+        else sumSqEven (₁ + 1) ₀
+
+╭─ main : I64 → I64
+╰─ sumSqEven 1 ₀

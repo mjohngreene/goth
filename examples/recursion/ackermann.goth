@@ -1,0 +1,18 @@
+# Ackermann function
+# Input: m n
+# Precondition: m >= 0, n >= 0
+# Postcondition: result > 0
+# Property: A(0,n) = n+1
+# Property: A(m,0) = A(m-1,1) for m > 0
+# Property: A(m,n) = A(m-1, A(m,n-1)) for m,n > 0
+# Growth: Non-primitive recursive, grows extremely fast
+# A(3,4) = 125, A(4,1) = 65533, A(4,2) = 2^65536 - 3
+# De Bruijn: ₁ = m, ₀ = n
+
+╭─ ack : I64 → I64 → I64
+╰─ if ₁ = 0 then ₀ + 1
+   else if ₀ = 0 then ack (₁ - 1) 1
+   else ack (₁ - 1) (ack ₁ (₀ - 1))
+
+╭─ main : I64 → I64 → I64
+╰─ ack ₁ ₀

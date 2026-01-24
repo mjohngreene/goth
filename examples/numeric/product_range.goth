@@ -1,0 +1,8 @@
+# Product of range: n! via Π operator
+# Precondition: n >= 1
+# Postcondition: result = n!
+# Property: Π [1..n] = 1 × 2 × ... × n = n!
+# Uses: Π (product) operator
+
+╭─ main : I64 → I64
+╰─ Π (range 1 (₀ + 1))
