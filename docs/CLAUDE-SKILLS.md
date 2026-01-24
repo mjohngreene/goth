@@ -330,4 +330,102 @@ OK: parsed 1 declaration(s)
 Type error: Cannot unify types: I64 and Bool
 ```
 
-The `--check` flag validates types before execution.
+The `--check` flag validates types before execution (off by default for interpreter use).
+
+## Benchmarking & Testing
+
+### Running Tests
+
+```bash
+# Run all benchmark tests
+python benchmark/run_tests.py
+
+# Run specific category
+python benchmark/run_tests.py --category basic
+
+# Verbose output
+python benchmark/run_tests.py --verbose
+
+# JSON output for analysis
+python benchmark/run_tests.py --json > results.json
+```
+
+### Test Categories
+
+| Category | Tests | Description |
+|----------|-------|-------------|
+| basic | 10 | Simple arithmetic, comparisons |
+| recursion | 10 | Factorial, fibonacci, GCD, Ackermann |
+| algorithms | 6 | Primes, binary search, modpow |
+| numeric | 7 | Gamma function, Taylor series, Newton-Raphson |
+| higher_order | 6 | Fold, compose, pipeline |
+
+### Generating Prompts
+
+```bash
+# Generate prompt for specific test
+python benchmark/prompts/prompt_generator.py factorial
+
+# Generate prompt for JSON AST output
+python benchmark/prompts/prompt_generator.py --format json gcd
+
+# List all available tests
+python benchmark/prompts/prompt_generator.py --list
+
+# Generate all prompts
+python benchmark/prompts/prompt_generator.py --all
+```
+
+### Prompt Formats
+
+**Syntax prompt** - asks LLM to generate Goth syntax directly:
+```
+Implement the following function in Goth:
+Function: factorial
+Signature: I64 → I64
+...
+```
+
+**JSON AST prompt** - asks LLM to generate structured JSON:
+```
+Generate a Goth JSON AST for the following function:
+Function: factorial
+Signature: I64 → I64
+...
+```
+
+### Python Baselines
+
+Reference implementations in `benchmark/baselines/python/`:
+- `basic.py` - identity, abs, max, etc.
+- `recursion.py` - factorial, fibonacci, GCD, Ackermann
+- `algorithms.py` - isPrime, modpow, binary search
+- `numeric.py` - gamma, Taylor series, Newton-Raphson
+- `higher_order.py` - fold, compose, pipeline
+
+### Metrics Collected
+
+See `benchmark/METRICS.md` for full details:
+
+1. **First-attempt success rate** - correct on first try
+2. **Parse success rate** - syntactically valid
+3. **Semantic correctness** - produces right output
+4. **Iterations to correct** - attempts needed
+5. **Token count** - compared to Python baseline
+6. **De Bruijn errors** - index mistakes
+
+## Tail Call Optimization
+
+Goth supports TCO via trampoline for tail-recursive functions:
+
+```goth
+# NOT tail recursive (overflows on deep recursion)
+╭─ sum : I64 → I64
+╰─ if ₀ < 1 then 0 else ₀ + sum (₀ - 1)
+
+# IS tail recursive (constant stack)
+╭─ sumAcc : I64 → I64 → I64
+╰─ if ₁ < 1 then ₀ else sumAcc (₁ - 1) (₀ + ₁)
+```
+
+See `examples/tco/` for naive vs TCO versions of common functions.

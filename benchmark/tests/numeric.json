@@ -1,0 +1,74 @@
+{
+  "category": "numeric",
+  "description": "Mathematical and numeric computations",
+  "tests": [
+    {
+      "name": "gamma_fact",
+      "file": "examples/numeric/gamma_fact.goth",
+      "description": "Factorial via Gamma function",
+      "cases": [
+        {"input": [1.0], "expected": 1.0, "tolerance": 0.001},
+        {"input": [5.0], "expected": 120.0, "tolerance": 0.001},
+        {"input": [10.0], "expected": 3628800.0, "tolerance": 1.0}
+      ]
+    },
+    {
+      "name": "gamma_half",
+      "file": "examples/numeric/gamma_half.goth",
+      "description": "Gamma at half-integers",
+      "cases": [
+        {"input": [0.5], "expected": 1.7724538509, "tolerance": 0.0001},
+        {"input": [1.5], "expected": 0.8862269255, "tolerance": 0.0001}
+      ]
+    },
+    {
+      "name": "sum_squares",
+      "file": "examples/numeric/sum_squares.goth",
+      "description": "Sum of squares 1² + ... + n²",
+      "cases": [
+        {"input": [1], "expected": 1},
+        {"input": [5], "expected": 55},
+        {"input": [10], "expected": 385}
+      ]
+    },
+    {
+      "name": "product_range",
+      "file": "examples/numeric/product_range.goth",
+      "description": "Product of 1 to n (factorial via Π)",
+      "cases": [
+        {"input": [1], "expected": 1},
+        {"input": [5], "expected": 120},
+        {"input": [7], "expected": 5040}
+      ]
+    },
+    {
+      "name": "harmonic",
+      "file": "examples/numeric/harmonic.goth",
+      "description": "Harmonic number H(n)",
+      "cases": [
+        {"input": [1], "expected": 1.0, "tolerance": 0.001},
+        {"input": [10], "expected": 2.9289682539, "tolerance": 0.001}
+      ]
+    },
+    {
+      "name": "exp_taylor",
+      "file": "examples/numeric/exp_taylor.goth",
+      "description": "e^x via Taylor series",
+      "cases": [
+        {"input": [0.0], "expected": 1.0, "tolerance": 0.001},
+        {"input": [1.0], "expected": 2.718281828, "tolerance": 0.001},
+        {"input": [2.0], "expected": 7.389056099, "tolerance": 0.001}
+      ]
+    },
+    {
+      "name": "sqrt_newton",
+      "file": "examples/numeric/sqrt_newton.goth",
+      "description": "Square root via Newton-Raphson",
+      "cases": [
+        {"input": [4.0], "expected": 2.0, "tolerance": 0.001},
+        {"input": [2.0], "expected": 1.414213562, "tolerance": 0.001},
+        {"input": [9.0], "expected": 3.0, "tolerance": 0.001}
+      ]
+    }
+  ]
+}

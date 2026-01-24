@@ -1,0 +1,108 @@
+{
+  "category": "basic",
+  "description": "Simple single-expression functions",
+  "tests": [
+    {
+      "name": "identity",
+      "file": "examples/basic/identity.goth",
+      "description": "Return input unchanged",
+      "cases": [
+        {"input": [0], "expected": 0},
+        {"input": [42], "expected": 42},
+        {"input": [-7], "expected": -7}
+      ]
+    },
+    {
+      "name": "add_one",
+      "file": "examples/basic/add_one.goth",
+      "description": "Add 1 to input",
+      "cases": [
+        {"input": [0], "expected": 1},
+        {"input": [41], "expected": 42},
+        {"input": [-1], "expected": 0}
+      ]
+    },
+    {
+      "name": "double",
+      "file": "examples/basic/double.goth",
+      "description": "Multiply by 2",
+      "cases": [
+        {"input": [0], "expected": 0},
+        {"input": [21], "expected": 42},
+        {"input": [-5], "expected": -10}
+      ]
+    },
+    {
+      "name": "square",
+      "file": "examples/basic/square.goth",
+      "description": "Square the input",
+      "cases": [
+        {"input": [0], "expected": 0},
+        {"input": [5], "expected": 25},
+        {"input": [-3], "expected": 9}
+      ]
+    },
+    {
+      "name": "max_two",
+      "file": "examples/basic/max_two.goth",
+      "description": "Maximum of two numbers",
+      "cases": [
+        {"input": [3, 7], "expected": 7},
+        {"input": [7, 3], "expected": 7},
+        {"input": [5, 5], "expected": 5},
+        {"input": [-3, -7], "expected": -3}
+      ]
+    },
+    {
+      "name": "min_two",
+      "file": "examples/basic/min_two.goth",
+      "description": "Minimum of two numbers",
+      "cases": [
+        {"input": [3, 7], "expected": 3},
+        {"input": [7, 3], "expected": 3},
+        {"input": [5, 5], "expected": 5},
+        {"input": [-3, -7], "expected": -7}
+      ]
+    },
+    {
+      "name": "abs",
+      "file": "examples/basic/abs.goth",
+      "description": "Absolute value",
+      "cases": [
+        {"input": [5], "expected": 5},
+        {"input": [-5], "expected": 5},
+        {"input": [0], "expected": 0}
+      ]
+    },
+    {
+      "name": "sign",
+      "file": "examples/basic/sign.goth",
+      "description": "Sign function (-1, 0, or 1)",
+      "cases": [
+        {"input": [42], "expected": 1},
+        {"input": [-42], "expected": -1},
+        {"input": [0], "expected": 0}
+      ]
+    },
+    {
+      "name": "is_even",
+      "file": "examples/basic/is_even.goth",
+      "description": "Check if even",
+      "cases": [
+        {"input": [4], "expected": "⊤"},
+        {"input": [7], "expected": "⊥"},
+        {"input": [0], "expected": "⊤"}
+      ]
+    },
+    {
+      "name": "is_positive",
+      "file": "examples/basic/is_positive.goth",
+      "description": "Check if positive",
+      "cases": [
+        {"input": [5], "expected": "⊤"},
+        {"input": [-5], "expected": "⊥"},
+        {"input": [0], "expected": "⊥"}
+      ]
+    }
+  ]
+}
