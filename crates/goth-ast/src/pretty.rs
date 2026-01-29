@@ -673,6 +673,7 @@ fn binop_str(op: &crate::op::BinOp, unicode: bool) -> String {
         BinOp::Mod => "%".to_string(),
         BinOp::Pow => if unicode { "^".to_string() } else { "**".to_string() },
         BinOp::Eq => "=".to_string(),
+        BinOp::StructEq => if unicode { "≡".to_string() } else { "==".to_string() },
         BinOp::Neq => if unicode { "≠".to_string() } else { "!=".to_string() },
         BinOp::Lt => "<".to_string(),
         BinOp::Gt => ">".to_string(),

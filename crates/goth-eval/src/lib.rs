@@ -533,6 +533,33 @@ mod tests {
         }
     }
 
+    // ============ StructEq (≡ / ==) Tests ============
+
+    #[test]
+    fn test_struct_eq_integers() {
+        let expr = Expr::binop(BinOp::StructEq, Expr::int(5), Expr::int(5));
+        assert_eq!(eval(&expr).unwrap(), Value::Bool(true));
+    }
+
+    #[test]
+    fn test_struct_eq_arrays() {
+        let expr = Expr::binop(
+            BinOp::StructEq,
+            Expr::array(vec![Expr::int(1), Expr::int(2)]),
+            Expr::array(vec![Expr::int(1), Expr::int(2)]),
+        );
+        assert_eq!(eval(&expr).unwrap(), Value::Bool(true));
+    }
+
+    // ============ Mod keyword Tests ============
+
+    #[test]
+    fn test_mod_keyword() {
+        // 10 mod 3 → 1 (via parser)
+        let expr = Expr::binop(BinOp::Mod, Expr::int(10), Expr::int(3));
+        assert_eq!(eval(&expr).unwrap(), Value::Int(1));
+    }
+
     // ============ Write (▷) Tests ============
 
     #[test]

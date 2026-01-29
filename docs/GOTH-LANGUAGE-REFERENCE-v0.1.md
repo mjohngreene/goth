@@ -330,10 +330,17 @@ abs(-10)      # Absolute value: 10
 ```
 
 **ASCII alternatives:**
-- `=` or `==` for equality
 - `≠` or `!=` or `/=` for inequality
 - `≥` or `>=` for greater-or-equal
 - `≤` or `<=` for less-or-equal
+
+**Three levels of equality:**
+
+| Level | Unicode | ASCII | Semantics |
+|-------|---------|-------|-----------|
+| Value equality | `=` | `=` | Compare values |
+| Structural equality | `≡` | `==` | α-equivalent, ignoring sharing |
+| Referential equality | `≣` | `===` | Same node in DAG (reserved) |
 
 ### Logical
 

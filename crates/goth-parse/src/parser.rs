@@ -743,6 +743,7 @@ impl<'a> Parser<'a> {
             Token::Percent => BinOp::Mod,
             Token::PlusMinus => BinOp::PlusMinus,
             Token::Eq => BinOp::Eq,
+            Token::StructEq => BinOp::StructEq,
             Token::Neq => BinOp::Neq,
             Token::Lt => BinOp::Lt,
             Token::Gt => BinOp::Gt,
