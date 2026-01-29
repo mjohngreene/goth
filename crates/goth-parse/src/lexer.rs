@@ -141,6 +141,7 @@ pub enum Token {
     #[token("^")]
     Caret,
     #[token("%")]
+    #[token("mod")]
     Percent,
     #[token("±")]
     #[token("+-")]
@@ -299,8 +300,12 @@ pub enum Token {
 
     // ============ Equivalence ============
     #[token("≡")]
+    #[token("==")]
+    StructEq,
+
+    #[token("≣")]
     #[token("===")]
-    Equiv,
+    RefEq,
 
     // ============ Effects ============
     #[token("□")]
@@ -537,7 +542,7 @@ impl Token {
         match self {
             Token::Or => Some(3),
             Token::And => Some(4),
-            Token::Eq | Token::Neq | Token::Lt | Token::Gt | Token::Leq | Token::Geq => Some(5),
+            Token::Eq | Token::Neq | Token::Lt | Token::Gt | Token::Leq | Token::Geq | Token::StructEq => Some(5),
             Token::Concat => Some(6),
             Token::Plus | Token::Minus | Token::PlusMinus => Some(7),
             Token::Star | Token::Slash | Token::Percent | Token::ZipWith => Some(8),
@@ -854,6 +859,40 @@ mod tests {
         assert_eq!(lex.next(), Some(Token::Float(5.0)));
         assert_eq!(lex.next(), Some(Token::PlusMinus));
         assert_eq!(lex.next(), Some(Token::Float(0.1)));
+    }
+
+    #[test]
+    fn test_mod_keyword() {
+        let mut lex = Lexer::new("10 mod 3");
+        assert_eq!(lex.next(), Some(Token::Int(10)));
+        assert_eq!(lex.next(), Some(Token::Percent));
+        assert_eq!(lex.next(), Some(Token::Int(3)));
+    }
+
+    #[test]
+    fn test_struct_eq_tokens() {
+        let mut lex = Lexer::new("5 == 5");
+        assert_eq!(lex.next(), Some(Token::Int(5)));
+        assert_eq!(lex.next(), Some(Token::StructEq));
+        assert_eq!(lex.next(), Some(Token::Int(5)));
+
+        let mut lex = Lexer::new("5 ≡ 5");
+        assert_eq!(lex.next(), Some(Token::Int(5)));
+        assert_eq!(lex.next(), Some(Token::StructEq));
+        assert_eq!(lex.next(), Some(Token::Int(5)));
+    }
+
+    #[test]
+    fn test_ref_eq_tokens() {
+        let mut lex = Lexer::new("x === y");
+        assert_eq!(lex.next(), Some(Token::Ident("x".into())));
+        assert_eq!(lex.next(), Some(Token::RefEq));
+        assert_eq!(lex.next(), Some(Token::Ident("y".into())));
+
+        let mut lex = Lexer::new("x ≣ y");
+        assert_eq!(lex.next(), Some(Token::Ident("x".into())));
+        assert_eq!(lex.next(), Some(Token::RefEq));
+        assert_eq!(lex.next(), Some(Token::Ident("y".into())));
     }
 
     #[test]

@@ -50,8 +50,9 @@ I64 → I64           Function
 ## Common Operators
 
 ```
-Arithmetic:   +  -  ×  /  %  ^
+Arithmetic:   +  -  ×  /  %  ^    (% also written as mod)
 Comparison:   =  ≠  <  >  ≤  ≥
+Equality:     =  (value)  ≡/==  (structural)  ≣/===  (referential, reserved)
 Logical:      ∧  ∨  ¬            (or &&  ||  !)
 Map:          arr ↦ λ→ body      (or arr -: \-> body)
 Filter:       arr ▸ λ→ body      (or arr |> \-> body)
@@ -208,6 +209,9 @@ let v : [5]F64 ← [1.0, 2.0, 3.0] in v    # Error: shape mismatch
 | `≤` | `<=` |
 | `≥` | `>=` |
 | `≠` | `/=` |
+| `≡` | `==` |
+| `≣` | `===` |
+| `%` | `mod` |
 | `∧` | `&&` |
 | `∨` | `\|\|` |
 | `¬` | `!` |

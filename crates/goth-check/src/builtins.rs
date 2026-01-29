@@ -16,7 +16,7 @@ pub fn binop_type(op: BinOp, left: &Type, right: &Type) -> TypeResult<Type> {
         }
         
         // Comparison: T × T → Bool
-        Eq | Neq | Lt | Gt | Leq | Geq => {
+        Eq | StructEq | Neq | Lt | Gt | Leq | Geq => {
             comparison_op(left, right)
         }
         

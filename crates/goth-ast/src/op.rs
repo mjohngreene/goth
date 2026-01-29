@@ -18,6 +18,7 @@ pub enum BinOp {
 
     // Comparison
     Eq,       // =
+    StructEq, // ≡ / ==
     Neq,      // ≠
     Lt,       // <
     Gt,       // >
@@ -106,6 +107,7 @@ impl BinOp {
             BinOp::Mod => "%",
             BinOp::PlusMinus => "±",
             BinOp::Eq => "=",
+            BinOp::StructEq => "≡",
             BinOp::Neq => "≠",
             BinOp::Lt => "<",
             BinOp::Gt => ">",
@@ -135,7 +137,8 @@ impl BinOp {
             BinOp::Pow => "^",
             BinOp::Mod => "%",
             BinOp::PlusMinus => "+-",
-            BinOp::Eq => "==",
+            BinOp::Eq => "=",
+            BinOp::StructEq => "==",
             BinOp::Neq => "/=",
             BinOp::Lt => "<",
             BinOp::Gt => ">",
@@ -161,7 +164,7 @@ impl BinOp {
             BinOp::Pow => 10,
             BinOp::Mul | BinOp::Div | BinOp::Mod | BinOp::ZipWith => 9,
             BinOp::Add | BinOp::Sub | BinOp::PlusMinus | BinOp::Concat => 8,
-            BinOp::Eq | BinOp::Neq | BinOp::Lt | BinOp::Gt | BinOp::Leq | BinOp::Geq => 7,
+            BinOp::Eq | BinOp::StructEq | BinOp::Neq | BinOp::Lt | BinOp::Gt | BinOp::Leq | BinOp::Geq => 7,
             BinOp::And => 6,
             BinOp::Or => 5,
             BinOp::Map | BinOp::Filter | BinOp::Bind | BinOp::Compose => 4,
@@ -174,7 +177,7 @@ impl BinOp {
     pub fn assoc(&self) -> Assoc {
         match self {
             BinOp::Pow | BinOp::Compose | BinOp::Map | BinOp::Filter | BinOp::Bind | BinOp::Read => Assoc::Right,
-            BinOp::Eq | BinOp::Neq | BinOp::Lt | BinOp::Gt | BinOp::Leq | BinOp::Geq => Assoc::None,
+            BinOp::Eq | BinOp::StructEq | BinOp::Neq | BinOp::Lt | BinOp::Gt | BinOp::Leq | BinOp::Geq => Assoc::None,
             _ => Assoc::Left,  // includes Write
         }
     }

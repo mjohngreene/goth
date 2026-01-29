@@ -626,6 +626,18 @@ mod tests {
     }
 
     #[test]
+    fn test_struct_eq_type() {
+        let mut checker = TypeChecker::new();
+        let expr = Expr::BinOp(
+            BinOp::StructEq,
+            Box::new(Expr::Lit(Literal::Int(5))),
+            Box::new(Expr::Lit(Literal::Int(5))),
+        );
+        let ty = checker.infer(&expr).unwrap();
+        assert_eq!(ty, Type::Prim(PrimType::Bool));
+    }
+
+    #[test]
     fn test_comparison_operators() {
         let mut checker = TypeChecker::new();
         
