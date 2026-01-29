@@ -1,0 +1,38 @@
+{
+  "name": "write_stdout",
+  "decls": [
+    {
+      "Fn": {
+        "name": "main",
+        "type_params": [],
+        "signature": {
+          "Fn": [
+            {
+              "Prim": "I64"
+            },
+            {
+              "Tuple": []
+            }
+          ]
+        },
+        "effects": [],
+        "constraints": [],
+        "preconditions": [],
+        "postconditions": [],
+        "body": {
+          "BinOp": [
+            "Write",
+            {
+              "Lit": {
+                "String": "hello"
+              }
+            },
+            {
+              "Name": "stdout"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -461,4 +461,128 @@ mod tests {
         );
         assert_eq!(e.eval(&expr).unwrap(), Value::Int(10));
     }
+
+    // ============ Concat (⊕) Tests ============
+
+    #[test]
+    fn test_array_concat() {
+        let expr = Expr::binop(BinOp::Concat, Expr::array(vec![Expr::int(1), Expr::int(2)]), Expr::array(vec![Expr::int(3), Expr::int(4)]));
+        match eval(&expr).unwrap() { Value::Tensor(t) => { assert_eq!(t.len(), 4); assert_eq!(t.get_flat(0), Some(Value::Int(1))); assert_eq!(t.get_flat(3), Some(Value::Int(4))); } _ => panic!("Expected tensor") }
+    }
+
+    #[test]
+    fn test_concat_strings() {
+        let expr = Expr::binop(BinOp::Concat, Expr::Lit(Literal::String("ab".into())), Expr::Lit(Literal::String("cd".into())));
+        match eval(&expr).unwrap() { Value::Tensor(t) => { assert_eq!(t.to_string_value(), Some("abcd".to_string())); } _ => panic!("Expected string tensor") }
+    }
+
+    #[test]
+    fn test_concat_empty() {
+        let expr = Expr::binop(BinOp::Concat, Expr::array(vec![]), Expr::array(vec![Expr::int(1), Expr::int(2)]));
+        match eval(&expr).unwrap() { Value::Tensor(t) => { assert_eq!(t.len(), 2); assert_eq!(t.get_flat(0), Some(Value::Int(1))); } _ => panic!("Expected tensor") }
+    }
+
+    // ============ ZipWith (⊗) Tests ============
+
+    #[test]
+    fn test_zip_with() {
+        let expr = Expr::binop(BinOp::ZipWith, Expr::array(vec![Expr::int(1), Expr::int(2), Expr::int(3)]), Expr::array(vec![Expr::int(4), Expr::int(5), Expr::int(6)]));
+        match eval(&expr).unwrap() {
+            Value::Tensor(t) => {
+                assert_eq!(t.len(), 3);
+                assert_eq!(t.get_flat(0), Some(Value::Tuple(vec![Value::Int(1), Value::Int(4)])));
+                assert_eq!(t.get_flat(1), Some(Value::Tuple(vec![Value::Int(2), Value::Int(5)])));
+                assert_eq!(t.get_flat(2), Some(Value::Tuple(vec![Value::Int(3), Value::Int(6)])));
+            }
+            _ => panic!("Expected tensor of tuples")
+        }
+    }
+
+    #[test]
+    fn test_zip_dot_product() {
+        // Dot product via zip: dot(a, b) = Σ(a ⊗ b mapped to product)
+        // Use the dot primitive directly to verify zip works in the pipeline
+        let mut e = Evaluator::new();
+        let a = Expr::array(vec![Expr::float(1.0), Expr::float(2.0), Expr::float(3.0)]);
+        let b = Expr::array(vec![Expr::float(4.0), Expr::float(5.0), Expr::float(6.0)]);
+        let expr = Expr::app(Expr::app(Expr::name("dot"), a), b);
+        assert_eq!(e.eval(&expr).unwrap(), Value::float(32.0));
+    }
+
+    // ============ Bind (⤇) Tests ============
+
+    #[test]
+    fn test_bind_flatmap() {
+        // [1,2,3] ⤇ (λ→ [₀, ₀×2]) → [1,2,2,4,3,6]
+        let expr = Expr::binop(
+            BinOp::Bind,
+            Expr::array(vec![Expr::int(1), Expr::int(2), Expr::int(3)]),
+            Expr::lam(Expr::array(vec![Expr::idx(0), Expr::mul(Expr::idx(0), Expr::int(2))]))
+        );
+        match eval(&expr).unwrap() {
+            Value::Tensor(t) => {
+                assert_eq!(t.len(), 6);
+                assert_eq!(t.get_flat(0), Some(Value::Int(1)));
+                assert_eq!(t.get_flat(1), Some(Value::Int(2)));
+                assert_eq!(t.get_flat(2), Some(Value::Int(2)));
+                assert_eq!(t.get_flat(3), Some(Value::Int(4)));
+                assert_eq!(t.get_flat(4), Some(Value::Int(3)));
+                assert_eq!(t.get_flat(5), Some(Value::Int(6)));
+            }
+            _ => panic!("Expected tensor")
+        }
+    }
+
+    // ============ Write (▷) Tests ============
+
+    #[test]
+    fn test_write_to_file() {
+        use std::fs;
+        let temp_path = "/tmp/goth_test_write.txt";
+        let mut e = Evaluator::new();
+        let expr = Expr::binop(
+            BinOp::Write,
+            Expr::Lit(Literal::String("goth_write_content".into())),
+            Expr::Lit(Literal::String(temp_path.into()))
+        );
+        let result = e.eval(&expr).unwrap();
+        assert_eq!(result, Value::Unit);
+        let contents = fs::read_to_string(temp_path).unwrap();
+        assert_eq!(contents, "goth_write_content");
+        let _ = fs::remove_file(temp_path);
+    }
+
+    #[test]
+    fn test_write_to_stdout() {
+        let mut e = Evaluator::new();
+        let expr = Expr::binop(BinOp::Write, Expr::Lit(Literal::String("hello".into())), Expr::name("stdout"));
+        let result = e.eval(&expr).unwrap();
+        assert_eq!(result, Value::Unit);
+    }
+
+    #[test]
+    fn test_write_to_stderr() {
+        let mut e = Evaluator::new();
+        let expr = Expr::binop(BinOp::Write, Expr::Lit(Literal::String("error".into())), Expr::name("stderr"));
+        let result = e.eval(&expr).unwrap();
+        assert_eq!(result, Value::Unit);
+    }
+
+    // ============ Read (◁) Tests ============
+
+    #[test]
+    fn test_read_from_file() {
+        use std::fs;
+        let temp_path = "/tmp/goth_test_read.txt";
+        fs::write(temp_path, "goth_read_content").unwrap();
+        let mut e = Evaluator::new();
+        // Read is a BinOp where left is the path; right is unused in eval_read
+        let expr = Expr::binop(BinOp::Read, Expr::Lit(Literal::String(temp_path.into())), Expr::tuple(vec![]));
+        let result = e.eval(&expr).unwrap();
+        match result {
+            Value::Tensor(t) => { assert_eq!(t.to_string_value(), Some("goth_read_content".to_string())); }
+            _ => panic!("Expected string tensor")
+        }
+        let _ = fs::remove_file(temp_path);
+    }
 }

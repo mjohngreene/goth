@@ -1,0 +1,90 @@
+{
+  "name": "concat",
+  "decls": [
+    {
+      "Fn": {
+        "name": "main",
+        "type_params": [],
+        "signature": {
+          "Fn": [
+            {
+              "Prim": "I64"
+            },
+            {
+              "Var": "T"
+            }
+          ]
+        },
+        "effects": [],
+        "constraints": [],
+        "preconditions": [],
+        "postconditions": [],
+        "body": {
+          "BinOp": [
+            "Concat",
+            {
+              "BinOp": [
+                "Map",
+                {
+                  "App": [
+                    {
+                      "Name": "iota"
+                    },
+                    {
+                      "Idx": 0
+                    }
+                  ]
+                },
+                {
+                  "Lam": {
+                    "BinOp": [
+                      "Add",
+                      {
+                        "Idx": 0
+                      },
+                      {
+                        "Lit": {
+                          "Int": 1
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "BinOp": [
+                "Map",
+                {
+                  "App": [
+                    {
+                      "Name": "iota"
+                    },
+                    {
+                      "Idx": 0
+                    }
+                  ]
+                },
+                {
+                  "Lam": {
+                    "BinOp": [
+                      "Add",
+                      {
+                        "Idx": 0
+                      },
+                      {
+                        "Lit": {
+                          "Int": 1
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

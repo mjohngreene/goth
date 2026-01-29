@@ -1,0 +1,3 @@
+# Zip two ranges into pairs
+╭─ main : I64 → T
+╰─ (iota ₀ ↦ (λ→ ₀ + 1)) ⊗ (iota ₀ ↦ (λ→ ₀ × ₀))
