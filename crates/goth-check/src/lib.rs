@@ -1151,4 +1151,90 @@ mod tests {
         let result = checker.infer(&expr);
         assert!(result.is_err(), "let x : [3]I64 = [1.0, 2.0, 3.0] should fail due to element type mismatch");
     }
+
+    // ============ Bind (⤇) Type Tests ============
+
+    #[test]
+    fn test_bind_type() {
+        use goth_ast::shape::{Shape, Dim};
+
+        let mut checker = TypeChecker::new();
+
+        // [3]F64 ⤇ (F64 → [?]F64) → [?]F64
+        let arr = Expr::Array(vec![
+            Expr::Lit(Literal::Float(1.0)),
+            Expr::Lit(Literal::Float(2.0)),
+            Expr::Lit(Literal::Float(3.0)),
+        ]);
+        // Use an annotated lambda so the type checker can infer a Fn type
+        let func_ty = Type::func(
+            Type::Prim(PrimType::F64),
+            Type::Tensor(Shape(vec![Dim::Var("?".into())]), Box::new(Type::Prim(PrimType::F64))),
+        );
+        let func_expr = Expr::Annot(
+            Box::new(Expr::Lam(Box::new(Expr::Array(vec![Expr::Idx(0)])))),
+            func_ty,
+        );
+        let expr = Expr::BinOp(BinOp::Bind, Box::new(arr), Box::new(func_expr));
+        let ty = checker.infer(&expr).unwrap();
+
+        match ty {
+            Type::Tensor(shape, elem) => {
+                assert_eq!(shape.rank(), 1);
+                assert_eq!(*elem, Type::Prim(PrimType::F64));
+            }
+            _ => panic!("Expected tensor type for bind result, got {:?}", ty),
+        }
+    }
+
+    // ============ Write (▷) Type Tests ============
+
+    #[test]
+    fn test_write_type() {
+        let mut checker = TypeChecker::new();
+
+        let expr = Expr::BinOp(
+            BinOp::Write,
+            Box::new(Expr::Lit(Literal::String("content".into()))),
+            Box::new(Expr::Lit(Literal::String("/tmp/test".into()))),
+        );
+        let ty = checker.infer(&expr).unwrap();
+        assert_eq!(ty, Type::unit());
+    }
+
+    #[test]
+    fn test_write_stream_type() {
+        let mut checker = TypeChecker::new();
+
+        let expr = Expr::BinOp(
+            BinOp::Write,
+            Box::new(Expr::Lit(Literal::String("hello".into()))),
+            Box::new(Expr::Name("stdout".into())),
+        );
+        let ty = checker.infer(&expr).unwrap();
+        assert_eq!(ty, Type::unit());
+    }
+
+    // ============ Read (◁) Type Tests ============
+
+    #[test]
+    fn test_read_type() {
+        use goth_ast::shape::Shape;
+
+        let mut checker = TypeChecker::new();
+
+        let expr = Expr::BinOp(
+            BinOp::Read,
+            Box::new(Expr::Lit(Literal::String("/tmp/test".into()))),
+            Box::new(Expr::Tuple(vec![])),
+        );
+        let ty = checker.infer(&expr).unwrap();
+        match ty {
+            Type::Tensor(shape, elem) => {
+                assert_eq!(shape.rank(), 1);
+                assert_eq!(*elem, Type::Prim(PrimType::Char));
+            }
+            _ => panic!("Expected char tensor type for read result, got {:?}", ty),
+        }
+    }
 }

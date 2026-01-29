@@ -1,0 +1,2 @@
+╭─ main : I64 → ()
+╰─ "hello world" ▷ "/tmp/goth_write_test.txt"

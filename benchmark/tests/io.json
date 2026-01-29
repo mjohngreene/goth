@@ -1,0 +1,30 @@
+{
+  "category": "io",
+  "description": "I/O operations with streams and files",
+  "tests": [
+    {
+      "name": "write_stdout",
+      "file": "examples/io/write_stdout.goth",
+      "description": "Write string to stdout via ▷ operator",
+      "cases": [
+        {"input": [0], "expected": "()"}
+      ]
+    },
+    {
+      "name": "write_stderr",
+      "file": "examples/io/write_stderr.goth",
+      "description": "Write string to stderr via ▷ operator",
+      "cases": [
+        {"input": [0], "expected": "()"}
+      ]
+    },
+    {
+      "name": "write_file",
+      "file": "examples/io/write_file.goth",
+      "description": "Write string to file via ▷ operator",
+      "cases": [
+        {"input": [0], "expected": "()"}
+      ]
+    }
+  ]
+}
