@@ -264,7 +264,7 @@
 
 # Reverse char array
 ╭─ reverseChars : [n]Char → [n]Char
-╰─ reverse (chars ₀)
+╰─ reverse ₀
 
 # Filter characters by predicate
 ╭─ filterChars : (Char → Bool) → String → [m]Char

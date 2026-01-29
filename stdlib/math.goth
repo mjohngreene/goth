@@ -98,9 +98,7 @@ let lnTen = ln 10.0
 
 # ============ Exponential and Logarithmic ============
 
-# Exponential (alias)
-╭─ exp : F → F
-╰─ 𝕖 ^ ₀
+# Note: exp is a built-in primitive; do not redefine here.
 
 # Natural log (alias)
 ╭─ log : F → F
@@ -239,9 +237,12 @@ let lnTen = ln 10.0
 ╰─ ₁ / ₀
 
 # Modulo (always non-negative for positive divisor)
+# Note: for negative divisors, result may still be negative.
 ╭─ mod : ℤ → ℤ → ℤ
 ╰─ let r = ₁ % ₀
-   in if r < 0 then r + ₀ else r
+   in if r < 0 ∧ ₀ > 0 then r + ₀
+   else if r > 0 ∧ ₀ < 0 then r + ₀
+   else r
 
 # Quotient and remainder as pair
 ╭─ quotRem : ℤ → ℤ → ⟨ℤ, ℤ⟩
@@ -465,10 +466,10 @@ let epsilon = 2.220446049250313e-16
 
 # ============ Polynomial Evaluation ============
 
-# Evaluate polynomial using Horner's method
+# Evaluate polynomial via direct summation
 # coeffs are [a₀, a₁, a₂, ...] for a₀ + a₁x + a₂x² + ...
+# Note: This is O(n²) — true Horner's method requires fold, which
+# is blocked by the multi-argument recursion interpreter bug.
 ╭─ polyEval : [n]F → F → F
-╰─ let coeffs = reverse ₁
-   in if len coeffs = 0 then 0.0
-   else let result = coeffs ↦ λ→ ₀
-        in Σ (iota (len coeffs) ↦ λ→ ₂[₀] × (₁ ^ toFloat ₀))
+╰─ if len ₁ = 0 then 0.0
+   else Σ (iota (len ₁) ↦ λ→ ₂[₀] × (₁ ^ toFloat ₀))
