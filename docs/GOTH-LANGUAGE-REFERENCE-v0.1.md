@@ -496,6 +496,8 @@ let arr = [10, 20, 30, 40] in arr[2]
 # Result: 30 (0-indexed)
 ```
 
+**Note:** The `[` must be directly adjacent (no space) to be parsed as indexing. With a space, `f [1,2]` is function application, passing the array `[1,2]` as an argument to `f`.
+
 **Multi-dimensional indexing:**
 ```goth
 let matrix = [[1, 2, 3], [4, 5, 6]] in
@@ -901,6 +903,8 @@ When uncertain values flow through arithmetic operators and math functions, unce
 ```
 
 ### Effect Types
+
+> **Aspirational:** Effect annotations are parsed and stored in the AST but not enforced by the type checker or evaluator. They currently serve as documentation. See `docs/EFFECT-SYSTEM-ROADMAP.md`.
 
 ```goth
 □                            # Pure (no effects)

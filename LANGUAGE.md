@@ -55,10 +55,16 @@ Goth uses de Bruijn indices instead of named variables. This eliminates shadowin
 λ→ λ→ ₀ + ₁      # add: ₀ is second (inner) arg, ₁ is first (outer) arg
 ```
 
-In function declarations, arguments bind in order (`₀` = first arg):
+In multi-arg function declarations, `₀` = **last** argument (most recently bound):
 ```goth
 ╭─ sub : I64 → I64 → I64
-╰─ ₀ - ₁            # ₀ = first arg, ₁ = second arg (sub 10 3 = 7)
+╰─ ₁ - ₀            # ₁ = first arg, ₀ = second arg (sub 10 3 = 7)
+```
+
+For single-arg functions, `₀` is the sole argument:
+```goth
+╭─ square : I64 → I64
+╰─ ₀ × ₀            # ₀ = the argument
 ```
 
 Let bindings shift indices:
@@ -235,11 +241,13 @@ let v : [5]F64 ← [1.0, 2.0, 3.0] in v    -- Error: shape mismatch
 ### Indexing
 
 ```goth
-arr[0]                   -- First element
+arr[0]                   -- First element (bracket must be adjacent, no space)
 arr[i]                   -- Element at index i
 tuple.0                  -- First tuple field
 record.x                 -- Named field x
 ```
+
+**Note:** The `[` must be directly adjacent to the expression (no space) to be parsed as indexing. With a space, `f [1,2]` is function application (passing the array `[1,2]` to `f`).
 
 ---
 
@@ -294,6 +302,8 @@ enum Option α where Some α | None
 
 ## Effects
 
+> **Note:** Effect annotations are parsed into the AST but not yet enforced. Functions with I/O side effects work with or without annotations. See `docs/EFFECT-SYSTEM-ROADMAP.md` for the enforcement plan.
+
 Effects are declared with `◇` annotations:
 
 | Effect | Description |
@@ -308,7 +318,7 @@ Effects are declared with `◇` annotations:
 ╰─ print "Hello!"
 ```
 
-Pure functions (no effects) need no annotation.
+Pure functions (no effects) need no annotation. Currently, effect annotations serve as documentation — the runtime does not reject effectful operations in unannotated functions.
 
 ---
 
@@ -317,16 +327,13 @@ Pure functions (no effects) need no annotation.
 ### Imports
 
 ```goth
-use stdlib.prelude
-use stdlib.option
-use mylib.utils
+use "prelude.goth"
+use "../stdlib/option.goth"
 ```
 
 ### Module Files
 
-Each `.goth` file is a module. The module path corresponds to the file path:
-- `stdlib/prelude.goth` → `stdlib.prelude`
-- `stdlib/option.goth` → `stdlib.option`
+Each `.goth` file is a module. The `use` declaration takes a string path (relative to the importing file) and inlines all declarations from that file into the current namespace.
 
 ---
 
@@ -345,7 +352,7 @@ Each `.goth` file is a module. The module path corresponds to the file path:
 |------|-----------|-------------|
 | `Σ`, `sum` | `[n]α → α` | Sum elements |
 | `Π`, `prod` | `[n]α → α` | Product elements |
-| `length` | `[n]α → I64` | Array length |
+| `len` | `[n]α → I64` | Array length |
 
 ### Transformations
 
@@ -356,7 +363,8 @@ Each `.goth` file is a module. The module path corresponds to the file path:
 | `reverse` | `[n]α → [n]α` | Reverse order |
 | `take` | `I64 → [n]α → [m]α` | Take first k elements |
 | `drop` | `I64 → [n]α → [m]α` | Drop first k elements |
-| `⧺`, `++` | `[n]α → [m]α → [p]α` | Concatenate arrays |
+| `⧺` | `String → String → String` | Concatenate strings |
+| `⊕` | `[n]α → [m]α → [p]α` | Concatenate arrays |
 
 ### Linear Algebra
 
@@ -411,8 +419,13 @@ Supported functions: `+`, `-`, `×`, `/`, `^`, `√`, `exp`, `ln`, `log10`, `log
 
 | Name | Signature | Description |
 |------|-----------|-------------|
-| `print` | `α → ()` | Print to stdout |
+| `print` | `α → ()` | Print to stdout (with newline) |
 | `readLine` | `() → String` | Read line from stdin |
+| `readFile` | `String → String` | Read file contents |
+| `writeFile` | `String → String → ()` | Write content to file path |
+| `▷` | `String → String → ()` | Write operator: `"content" ▷ "path"` |
+| `toString` | `α → String` | Convert value to string |
+| `strConcat`, `⧺` | `String → String → String` | Concatenate strings |
 
 ---
 

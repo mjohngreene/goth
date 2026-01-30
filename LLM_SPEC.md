@@ -16,14 +16,14 @@ If:           if cond then a else b
 ## De Bruijn Indices (Critical)
 
 Variables are numbered by binding depth, not named:
-- `₀` (or `_0`) = first parameter / most recent binding
-- `₁` (or `_1`) = second parameter / one binding out
-- `₂` (or `_2`) = third parameter / two bindings out
+- `₀` (or `_0`) = most recent binding / last parameter
+- `₁` (or `_1`) = one binding out / second-to-last parameter
+- `₂` (or `_2`) = two bindings out / third-to-last parameter
 
 ```goth
-# Function args: ₀ = first arg, ₁ = second arg
+# Function args: ₀ = last arg, ₁ = second-to-last arg
 ╭─ sub : I64 → I64 → I64
-╰─ ₀ - ₁              # sub 10 3 = 7
+╰─ ₁ - ₀              # sub 10 3 = 7  (₁=10, ₀=3)
 
 # Let shifts indices
 ╭─ example : I64 → I64
@@ -191,7 +191,13 @@ Propagation rules: additive (√(δa²+δb²)) for `+`/`-`, relative error for `
    # Argument would be ₂ inside the lambda
    ```
 
-3. **Type mismatch I vs I64**: Use `I64` in signatures
+3. **Indexing vs application**: `arr[i]` (no space) is indexing; `f [1,2]` (with space) is function application
+   ```goth
+   let arr = [10, 20, 30] in arr[1]       # Indexing → 20
+   let f = (λ→ Σ ₀) in f [10, 20, 30]    # Application → 60
+   ```
+
+4. **Type mismatch I vs I64**: Use `I64` in signatures
    ```goth
    # WRONG
    ╭─ main : () → I
@@ -232,9 +238,18 @@ Propagation rules: additive (√(δa²+δb²)) for `+`/`-`, relative error for `
 | `⊤` | `true` |
 | `⊥` | `false` |
 | `ι` | `iota` |
-| `⧺` | `++` |
+| `⧺` | `strConcat` |
+| `⊕` | `concat` |
 | `⍉` | `transpose` |
 | `·` | `dot` |
+| `±` | `+-` |
+
+## Enforcement Notes
+
+- **Contracts** (`⊢` preconditions, `⊨` postconditions): enforced at runtime
+- **Effect annotations** (`◇io`, `◇mut`, `◇rand`): parsed but **not enforced** — `print` works without `◇io`. Use effect annotations as documentation only; do not rely on them for correctness.
+- **Type annotations**: parsed but type checking is partial
+- **Refinement types** (`{x : F64 | x > 0}`): parsed but predicates not solved
 
 ## Running Code
 
