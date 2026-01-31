@@ -700,6 +700,30 @@ pub fn primitive_type(name: &str) -> Option<Type> {
                 Type::unit(),
             ))
         }
+        "fold" | "⌿" => {
+            // (α → β → α) → α → [?]β → α
+            Some(Type::Forall(
+                vec![
+                    TypeParam { name: "α".into(), kind: TypeParamKind::Type },
+                    TypeParam { name: "β".into(), kind: TypeParamKind::Type },
+                ],
+                Box::new(Type::func_n(
+                    [
+                        Type::func(Type::Var("α".into()), Type::func(Type::Var("β".into()), Type::Var("α".into()))),
+                        Type::Var("α".into()),
+                        Type::Tensor(Shape(vec![Dim::Var("n".into())]), Box::new(Type::Var("β".into()))),
+                    ],
+                    Type::Var("α".into()),
+                )),
+            ))
+        }
+        "bitand" | "bitor" | "bitxor" | "⊻" | "shl" | "shr" => {
+            // I64 → I64 → I64
+            Some(Type::func_n(
+                [Type::Prim(PrimType::I64), Type::Prim(PrimType::I64)],
+                Type::Prim(PrimType::I64),
+            ))
+        }
         "writeFile" => {
             // String → String → Unit (write content to file)
             Some(Type::func_n(

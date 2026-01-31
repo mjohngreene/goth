@@ -318,6 +318,11 @@ pub fn apply_prim(prim: PrimFn, args: Vec<Value>) -> EvalResult<Value> {
         PrimFn::StartsWith => binary_args(&args, starts_with),
         PrimFn::EndsWith => binary_args(&args, ends_with),
         PrimFn::Contains => binary_args(&args, str_contains),
+        PrimFn::BitAnd => binary_args(&args, bitand),
+        PrimFn::BitOr => binary_args(&args, bitor),
+        PrimFn::BitXor => binary_args(&args, bitxor),
+        PrimFn::Shl => binary_args(&args, shl),
+        PrimFn::Shr => binary_args(&args, shr),
         _ => Err(EvalError::not_implemented(format!("primitive: {:?}", prim))),
     }
 }
@@ -466,6 +471,41 @@ fn modulo(left: Value, right: Value) -> EvalResult<Value> {
         (Value::Int(a), Value::Int(b)) => if *b == 0 { Err(EvalError::DivisionByZero) } else { Ok(Value::Int(a % b)) },
         (Value::Float(a), Value::Float(b)) => if b.0 == 0.0 { Err(EvalError::DivisionByZero) } else { Ok(Value::Float(OrderedFloat(a.0 % b.0))) },
         _ => Err(EvalError::type_error_msg(format!("Cannot compute modulo of {} and {}", left.type_name(), right.type_name()))),
+    }
+}
+
+fn bitand(left: Value, right: Value) -> EvalResult<Value> {
+    match (&left, &right) {
+        (Value::Int(a), Value::Int(b)) => Ok(Value::Int(a & b)),
+        _ => Err(EvalError::type_error_msg(format!("Cannot bitand {} and {}", left.type_name(), right.type_name())))
+    }
+}
+
+fn bitor(left: Value, right: Value) -> EvalResult<Value> {
+    match (&left, &right) {
+        (Value::Int(a), Value::Int(b)) => Ok(Value::Int(a | b)),
+        _ => Err(EvalError::type_error_msg(format!("Cannot bitor {} and {}", left.type_name(), right.type_name())))
+    }
+}
+
+fn bitxor(left: Value, right: Value) -> EvalResult<Value> {
+    match (&left, &right) {
+        (Value::Int(a), Value::Int(b)) => Ok(Value::Int(a ^ b)),
+        _ => Err(EvalError::type_error_msg(format!("Cannot bitxor {} and {}", left.type_name(), right.type_name())))
+    }
+}
+
+fn shl(left: Value, right: Value) -> EvalResult<Value> {
+    match (&left, &right) {
+        (Value::Int(a), Value::Int(b)) => Ok(Value::Int(a << (*b as u32))),
+        _ => Err(EvalError::type_error_msg(format!("Cannot shl {} and {}", left.type_name(), right.type_name())))
+    }
+}
+
+fn shr(left: Value, right: Value) -> EvalResult<Value> {
+    match (&left, &right) {
+        (Value::Int(a), Value::Int(b)) => Ok(Value::Int(a >> (*b as u32))),
+        _ => Err(EvalError::type_error_msg(format!("Cannot shr {} and {}", left.type_name(), right.type_name())))
     }
 }
 

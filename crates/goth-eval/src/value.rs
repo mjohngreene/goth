@@ -75,6 +75,7 @@ pub enum PrimFn {
     ParseInt, ParseFloat,  // String parsing
     Lines, Words, Bytes,  // String splitting for wc
     StrEq, StartsWith, EndsWith, Contains,  // String comparison
+    BitAnd, BitOr, BitXor, Shl, Shr,  // Bitwise operations
 }
 
 #[derive(Debug, Clone)]
