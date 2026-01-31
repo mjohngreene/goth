@@ -383,7 +383,7 @@ pub enum Token {
 
     // ============ APL-style single character identifiers ============
     // Note: ⧺ (concat) is now a dedicated token, not an identifier
-    #[regex(r"[⍳⍴⌽⍉·…↑↓]", priority = 5, callback = |lex| lex.slice().to_string())]
+    #[regex(r"[⍳⍴⌽⍉·…↑↓⧏⧐]", priority = 5, callback = |lex| lex.slice().to_string())]
     AplIdent(String),
 
     // ============ Primitive Types ============

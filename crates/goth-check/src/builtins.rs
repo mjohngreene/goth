@@ -680,6 +680,26 @@ pub fn primitive_type(name: &str) -> Option<Type> {
                 Type::Tensor(Shape(vec![Dim::Var("m".into())]), Box::new(Type::Prim(PrimType::Char))),
             ))
         }
+        "readBytes" | "⧏" => {
+            // I64 → String → [?]I64 (read N bytes from file path)
+            Some(Type::func_n(
+                [
+                    Type::Prim(PrimType::I64),
+                    Type::Tensor(Shape(vec![Dim::Var("n".into())]), Box::new(Type::Prim(PrimType::Char))),
+                ],
+                Type::Tensor(Shape(vec![Dim::Var("m".into())]), Box::new(Type::Prim(PrimType::I64))),
+            ))
+        }
+        "writeBytes" | "⧐" => {
+            // [?]I64 → String → () (write bytes to file path)
+            Some(Type::func_n(
+                [
+                    Type::Tensor(Shape(vec![Dim::Var("n".into())]), Box::new(Type::Prim(PrimType::I64))),
+                    Type::Tensor(Shape(vec![Dim::Var("m".into())]), Box::new(Type::Prim(PrimType::Char))),
+                ],
+                Type::unit(),
+            ))
+        }
         "writeFile" => {
             // String → String → Unit (write content to file)
             Some(Type::func_n(

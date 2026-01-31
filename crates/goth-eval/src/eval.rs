@@ -59,6 +59,8 @@ impl Evaluator {
             ("readLine", PrimFn::ReadLine), ("read_line", PrimFn::ReadLine),
             ("readKey", PrimFn::ReadKey), ("read_key", PrimFn::ReadKey),  // Read single key
             ("readFile", PrimFn::ReadFile), ("writeFile", PrimFn::WriteFile),
+            ("readBytes", PrimFn::ReadBytes), ("⧏", PrimFn::ReadBytes),
+            ("writeBytes", PrimFn::WriteBytes), ("⧐", PrimFn::WriteBytes),
             ("rawModeEnter", PrimFn::RawModeEnter), ("rawModeExit", PrimFn::RawModeExit),  // Terminal raw mode
             ("sleep", PrimFn::Sleep),  // Sleep for milliseconds
             ("toInt", PrimFn::ToInt), ("toFloat", PrimFn::ToFloat), ("toBool", PrimFn::ToBool), ("toChar", PrimFn::ToChar),
@@ -548,7 +550,7 @@ fn prim_arity(prim: PrimFn) -> usize {
         PrimFn::Print | PrimFn::Write | PrimFn::ReadLine | PrimFn::ReadKey | PrimFn::ReadFile | PrimFn::Sleep => 1,
         PrimFn::Flush | PrimFn::RawModeEnter | PrimFn::RawModeExit => 1,  // Terminal control (take unit)
         PrimFn::Lines | PrimFn::Words | PrimFn::Bytes => 1,  // String splitting (unary)
-        PrimFn::WriteFile => 2,  // WriteFile takes path and content
+        PrimFn::WriteFile | PrimFn::ReadBytes | PrimFn::WriteBytes => 2,  // Binary I/O takes 2 args
         PrimFn::StrEq | PrimFn::StartsWith | PrimFn::EndsWith | PrimFn::Contains => 2,  // String comparison (binary)
         _ => 2,  // Range, StrConcat, Take, Drop, Index etc take 2 args
     }

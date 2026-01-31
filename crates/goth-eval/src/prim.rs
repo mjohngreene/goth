@@ -267,6 +267,42 @@ pub fn apply_prim(prim: PrimFn, args: Vec<Value>) -> EvalResult<Value> {
             fs::write(&path, &contents).map_err(|e| EvalError::IoError(format!("Failed to write '{}': {}", path, e)))?;
             Ok(Value::Unit)
         }
+        PrimFn::ReadBytes => {
+            if args.len() != 2 { return Err(EvalError::ArityMismatch { expected: 2, got: args.len() }); }
+            let count = match &args[0] {
+                Value::Int(n) => *n as usize,
+                _ => return Err(EvalError::type_error("Int", &args[0])),
+            };
+            let path = match &args[1] {
+                Value::Tensor(t) => t.to_string_value().ok_or_else(|| EvalError::type_error("String", &args[1]))?,
+                _ => return Err(EvalError::type_error("String", &args[1])),
+            };
+            use std::io::Read;
+            let mut file = std::fs::File::open(&path)
+                .map_err(|e| EvalError::IoError(format!("Failed to open '{}': {}", path, e)))?;
+            let mut buf = vec![0u8; count];
+            file.read_exact(&mut buf)
+                .map_err(|e| EvalError::IoError(format!("Failed to read {} bytes from '{}': {}", count, path, e)))?;
+            let byte_vals: Vec<i128> = buf.iter().map(|&b| b as i128).collect();
+            Ok(Value::Tensor(Tensor::from_ints(byte_vals)))
+        }
+        PrimFn::WriteBytes => {
+            if args.len() != 2 { return Err(EvalError::ArityMismatch { expected: 2, got: args.len() }); }
+            let bytes: Vec<u8> = match &args[0] {
+                Value::Tensor(t) => t.to_vec().iter().map(|v| match v {
+                    Value::Int(n) => Ok(*n as u8),
+                    _ => Err(EvalError::type_error("Int", v)),
+                }).collect::<Result<Vec<u8>, _>>()?,
+                _ => return Err(EvalError::type_error("Tensor", &args[0])),
+            };
+            let path = match &args[1] {
+                Value::Tensor(t) => t.to_string_value().ok_or_else(|| EvalError::type_error("String", &args[1]))?,
+                _ => return Err(EvalError::type_error("String", &args[1])),
+            };
+            std::fs::write(&path, &bytes)
+                .map_err(|e| EvalError::IoError(format!("Failed to write '{}': {}", path, e)))?;
+            Ok(Value::Unit)
+        }
         PrimFn::Iota => unary_args(&args, iota),
         PrimFn::Range => binary_args(&args, range),
         PrimFn::ToString => unary_args(&args, to_string),
