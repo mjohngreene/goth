@@ -103,10 +103,10 @@
 ╰─ Σ ₀ / len ₀
 
 ╭─ minimum : [n]F → F
-╰─ min/ ₀
+╰─ ⌿ (λ→ λ→ if ₀ < ₁ then ₀ else ₁) (₀[0]) ₀
 
 ╭─ maximum : [n]F → F
-╰─ max/ ₀
+╰─ ⌿ (λ→ λ→ if ₀ > ₁ then ₀ else ₁) (₀[0]) ₀
 
 # Variance (population variance)
 ╭─ variance : [n]F → F

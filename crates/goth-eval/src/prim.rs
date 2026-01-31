@@ -356,7 +356,7 @@ fn add(left: Value, right: Value) -> EvalResult<Value> {
             let (b, db) = uncertain_parts(&right).unwrap();
             Ok(make_uncertain(a + b, db))
         }
-        (Value::Int(a), Value::Int(b)) => Ok(Value::Int(a + b)),
+        (Value::Int(a), Value::Int(b)) => a.checked_add(*b).map(Value::Int).ok_or_else(|| EvalError::Overflow(format!("{} + {} overflows", a, b))),
         (Value::Float(a), Value::Float(b)) => Ok(Value::Float(OrderedFloat(a.0 + b.0))),
         (Value::Int(a), Value::Float(b)) => Ok(Value::Float(OrderedFloat(*a as f64 + b.0))),
         (Value::Float(a), Value::Int(b)) => Ok(Value::Float(OrderedFloat(a.0 + *b as f64))),
@@ -388,7 +388,7 @@ fn sub(left: Value, right: Value) -> EvalResult<Value> {
             let (b, db) = uncertain_parts(&right).unwrap();
             Ok(make_uncertain(a - b, db))
         }
-        (Value::Int(a), Value::Int(b)) => Ok(Value::Int(a - b)),
+        (Value::Int(a), Value::Int(b)) => a.checked_sub(*b).map(Value::Int).ok_or_else(|| EvalError::Overflow(format!("{} - {} overflows", a, b))),
         (Value::Float(a), Value::Float(b)) => Ok(Value::Float(OrderedFloat(a.0 - b.0))),
         (Value::Int(a), Value::Float(b)) => Ok(Value::Float(OrderedFloat(*a as f64 - b.0))),
         (Value::Float(a), Value::Int(b)) => Ok(Value::Float(OrderedFloat(a.0 - *b as f64))),
@@ -418,7 +418,7 @@ fn mul(left: Value, right: Value) -> EvalResult<Value> {
             let (b, db) = uncertain_parts(&right).unwrap();
             Ok(make_uncertain(a * b, (a * db).abs()))
         }
-        (Value::Int(a), Value::Int(b)) => Ok(Value::Int(a * b)),
+        (Value::Int(a), Value::Int(b)) => a.checked_mul(*b).map(Value::Int).ok_or_else(|| EvalError::Overflow(format!("{} × {} overflows", a, b))),
         (Value::Float(a), Value::Float(b)) => Ok(Value::Float(OrderedFloat(a.0 * b.0))),
         (Value::Int(a), Value::Float(b)) => Ok(Value::Float(OrderedFloat(*a as f64 * b.0))),
         (Value::Float(a), Value::Int(b)) => Ok(Value::Float(OrderedFloat(a.0 * *b as f64))),
@@ -497,14 +497,26 @@ fn bitxor(left: Value, right: Value) -> EvalResult<Value> {
 
 fn shl(left: Value, right: Value) -> EvalResult<Value> {
     match (&left, &right) {
-        (Value::Int(a), Value::Int(b)) => Ok(Value::Int(a << (*b as u32))),
+        (Value::Int(a), Value::Int(b)) => {
+            if *b < 0 || *b > 127 {
+                Err(EvalError::Overflow(format!("shift left by {} out of range 0..127", b)))
+            } else {
+                Ok(Value::Int(a << (*b as u32)))
+            }
+        }
         _ => Err(EvalError::type_error_msg(format!("Cannot shl {} and {}", left.type_name(), right.type_name())))
     }
 }
 
 fn shr(left: Value, right: Value) -> EvalResult<Value> {
     match (&left, &right) {
-        (Value::Int(a), Value::Int(b)) => Ok(Value::Int(a >> (*b as u32))),
+        (Value::Int(a), Value::Int(b)) => {
+            if *b < 0 || *b > 127 {
+                Err(EvalError::Overflow(format!("shift right by {} out of range 0..127", b)))
+            } else {
+                Ok(Value::Int(a >> (*b as u32)))
+            }
+        }
         _ => Err(EvalError::type_error_msg(format!("Cannot shr {} and {}", left.type_name(), right.type_name())))
     }
 }
@@ -536,9 +548,25 @@ fn pow(left: Value, right: Value) -> EvalResult<Value> {
             let unc = if a > 0.0 { (result * a.ln() * db).abs() } else { 0.0 };
             Ok(make_uncertain(result, unc))
         }
-        (Value::Int(a), Value::Int(b)) => if *b >= 0 { Ok(Value::Int(a.pow(*b as u32))) } else { Ok(Value::Float(OrderedFloat((*a as f64).powi(*b as i32)))) },
+        (Value::Int(a), Value::Int(b)) => {
+            if *b < 0 {
+                Ok(Value::Float(OrderedFloat((*a as f64).powi(*b as i32))))
+            } else if *b > u32::MAX as i128 {
+                Err(EvalError::Overflow(format!("exponent {} too large", b)))
+            } else {
+                a.checked_pow(*b as u32)
+                    .map(|r| Value::Int(r))
+                    .ok_or_else(|| EvalError::Overflow(format!("{} ^ {} overflows i128", a, b)))
+            }
+        }
         (Value::Float(a), Value::Float(b)) => Ok(Value::Float(OrderedFloat(a.0.powf(b.0)))),
-        (Value::Float(a), Value::Int(b)) => Ok(Value::Float(OrderedFloat(a.0.powi(*b as i32)))),
+        (Value::Float(a), Value::Int(b)) => {
+            if *b > i32::MAX as i128 || *b < i32::MIN as i128 {
+                Ok(Value::Float(OrderedFloat(a.0.powf(*b as f64))))
+            } else {
+                Ok(Value::Float(OrderedFloat(a.0.powi(*b as i32))))
+            }
+        }
         (Value::Int(a), Value::Float(b)) => Ok(Value::Float(OrderedFloat((*a as f64).powf(b.0)))),
         _ => Err(EvalError::type_error_msg(format!("Cannot raise {} to power {}", left.type_name(), right.type_name()))),
     }
@@ -550,7 +578,7 @@ fn negate(value: Value) -> EvalResult<Value> {
             let (a, da) = uncertain_parts(&value).unwrap();
             Ok(make_uncertain(-a, da))
         }
-        Value::Int(n) => Ok(Value::Int(-n)),
+        Value::Int(n) => n.checked_neg().map(Value::Int).ok_or_else(|| EvalError::Overflow(format!("negation of {} overflows", n))),
         Value::Float(f) => Ok(Value::Float(OrderedFloat(-f.0))),
         Value::Tensor(t) => Ok(Value::Tensor(t.map(|x| negate(x).unwrap_or(Value::Error("negate failed".into()))))),
         _ => Err(EvalError::type_error("numeric", &value)),
