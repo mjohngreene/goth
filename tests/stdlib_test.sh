@@ -181,22 +181,25 @@ echo "Module: option"
 EXPECTED_OPTION=$(cat <<'EOF'
 ⟨⊤, 42⟩
 ⟨⊤, 3.14⟩
+⟨⊥, 0⟩
+⊤
+⊥
 ⊤
 ⊥
 42
-3.14
+0
 ⟨⊤, 10⟩
-⟨⊤, 0⟩
+⟨⊥, 0⟩
 ⟨⊤, 5⟩
 ⟨⊥, 0⟩
 ⟨⊤, 1⟩
 ⟨⊤, 5⟩
 ⟨⊥, 0⟩
-⟨⊥, 0⟩
 ⊤
 ⊥
 Some(42)
 Some(3.14)
+None
 EOF
 )
 run_test "option" "tests/stdlib/test_option.goth" "$EXPECTED_OPTION"
@@ -206,7 +209,7 @@ echo "Module: result"
 EXPECTED_RESULT=$(cat <<'EOF'
 ⟨⊤, 42, 0⟩
 ⟨⊥, 0, 1⟩
-⟨⊤, 10, ""⟩
+⟨⊤, 10, 0⟩
 ⟨⊥, 0, "bad"⟩
 ⊤
 ⊥
@@ -214,12 +217,10 @@ EXPECTED_RESULT=$(cat <<'EOF'
 ⊥
 42
 0
-42
-0
 ⟨⊤, 10, 0⟩
 ⟨⊥, 0, 1⟩
-⟨⊤, 5, 0⟩
-⟨⊥, 0, -1⟩
+⟨⊤, 5, ""⟩
+⟨⊥, 0, "division by zero"⟩
 ⊤
 ⊥
 ⊥
